@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>わが家の資産計画 v25</title>
+<title>わが家の資産計画 v26</title>
 <style>
 :root{--bg:#f3f6fa;--card:#fff;--text:#172033;--muted:#697386;--line:#dfe6ef;--accent:#1f6f5f;--soft:#e7f2ef;--danger:#b42318}
 *{box-sizing:border-box}
@@ -40,6 +40,21 @@ h1{font-size:20px;margin:0 0 3px}h2{font-size:18px;margin:0 0 6px}.lead,.note{fo
 .details-toggle{width:100%;margin-top:8px;background:#edf1f6}.details{display:none;margin-top:7px}.details.open{display:block}
 .year-list{max-height:60vh;overflow-y:auto;border:1px solid var(--line);border-radius:9px}.year-row{display:grid;grid-template-columns:54px 45px 1fr;gap:6px;padding:8px;border-bottom:1px solid var(--line);font-size:12px}.year-row:last-child{border-bottom:0}
 .year-value{text-align:right}.negative{color:var(--danger);font-weight:900}.status-ok{color:var(--accent)}.status-warn{color:#9a6700}
+
+/* v26: related fields stay on one line */
+.inline-pair{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(105px,.85fr);gap:8px;grid-column:1/-1;align-items:end}
+.period-line{display:grid;grid-template-columns:minmax(86px,.75fr) minmax(0,1fr) minmax(0,1fr);gap:7px;grid-column:1/-1;align-items:end}
+.period-line.once{grid-template-columns:minmax(86px,.75fr) minmax(0,1fr)}
+.field.compact label{display:block}
+.period-hint{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-2px;line-height:1.45}
+@media(max-width:420px){
+ .inline-pair{grid-template-columns:minmax(0,1.28fr) minmax(100px,.72fr);gap:6px}
+ .period-line{grid-template-columns:88px minmax(0,1fr) minmax(0,1fr);gap:5px}
+ .period-line.once{grid-template-columns:88px minmax(0,1fr)}
+ .inline-pair .field label,.period-line .field label{font-size:11px}
+ .inline-pair input,.period-line input,.period-line select{padding-left:7px;padding-right:7px}
+}
+
 @media(min-width:650px){main{padding:12px}.summary-grid{grid-template-columns:repeat(3,1fr)}canvas{height:390px}.editor-grid{grid-template-columns:repeat(4,1fr)}.editor-grid .full{grid-column:span 2}}
 
 .fab{position:fixed;right:18px;bottom:20px;width:56px;height:56px;border:0;border-radius:50%;background:var(--accent);color:#fff;font-size:30px;line-height:50px;box-shadow:0 8px 22px rgba(31,111,95,.35);z-index:20;display:none}
@@ -311,10 +326,10 @@ select{padding-right:34px}
   <button class="condition-item" onclick="toggleBasicEditor()"><span class="c-label">インフレ率</span><span class="c-value" id="condInflation">—</span></button>
 </div>
 <div class="basic-editor" id="basicEditor"><div class="grid">
-<div class="field"><label>開始年齢<input id="startAge" type="number" value="60" oninput="markDirty()" onchange="recalculateAfterChange();recordHistory(\'基本情報を変更しました\')"></label></div>
-<div class="field"><label>開始年<input id="startYear" type="number" value="2026" oninput="markDirty()" onchange="recalculateAfterChange();recordHistory(\'基本情報を変更しました\')"></label></div>
-<div class="field"><label>計算期間<input id="years" type="number" value="30" oninput="markDirty()" onchange="recalculateAfterChange();recordHistory(\'基本情報を変更しました\')"></label></div>
-<div class="field"><label>インフレ率（％）<input id="inflation" type="number" step="0.1" value="1" oninput="markDirty()" onchange="recalculateAfterChange();recordHistory(\'基本情報を変更しました\')"></label></div>
+<div class="field"><label>開始年齢<input id="startAge" type="number" value="60" oninput="scheduleBasicRecalculation()" onchange="finishBasicChange()"></label></div>
+<div class="field"><label>開始年<input id="startYear" type="number" value="2026" oninput="scheduleBasicRecalculation()" onchange="finishBasicChange()"></label></div>
+<div class="field"><label>計算期間<input id="years" type="number" value="30" oninput="scheduleBasicRecalculation()" onchange="finishBasicChange()"></label></div>
+<div class="field"><label>インフレ率（％）<input id="inflation" type="number" step="0.1" value="1" oninput="scheduleBasicRecalculation()" onchange="finishBasicChange()"></label></div>
 </div></div>
 <div class="dashboard-chart-head">
   <h2>資産推移</h2>
@@ -341,8 +356,10 @@ select{padding-right:34px}
 <div class="editor" id="assetEditor">
 <div class="editor-title" id="assetEditorTitle">資産を追加</div>
 <div class="editor-grid">
-<div class="field full"><label>資産名<input id="assetName" type="text" placeholder="例：A銀行"></label></div>
-<div class="field full"><label>現在額（万円）<input id="assetAmount" type="number" placeholder="0"></label></div>
+<div class="inline-pair">
+<div class="field"><label>資産名<input id="assetName" type="text" placeholder="例：A銀行"></label></div>
+<div class="field"><label>現在額（万円）<input id="assetAmount" type="number" placeholder="0"></label></div>
+</div>
 </div>
 <div class="actions"><button class="btn secondary" onclick="closeEditor('asset')">キャンセル</button><button class="btn primary" onclick="saveAsset()">保存</button></div>
 </div>
@@ -354,10 +371,16 @@ select{padding-right:34px}
 <div class="editor" id="incomeEditor">
 <div class="editor-title" id="incomeEditorTitle">収入を追加</div>
 <div class="editor-grid">
-<div class="field full"><label>収入名<input id="incomeName" type="text" placeholder="例：年金"></label></div>
+<div class="inline-pair">
+<div class="field"><label>収入名<input id="incomeName" type="text" placeholder="例：年金"></label></div>
 <div class="field"><label>年額（万円）<input id="incomeAmount" type="number" placeholder="0"></label></div>
-<div class="field"><label>開始年齢<input id="incomeStart" type="number"></label></div>
-<div class="field"><label>終了年齢<input id="incomeEnd" type="number"></label></div>
+</div>
+<div class="period-line">
+<div class="field compact"><label>期間入力<select id="incomePeriodMode" onchange="updatePeriodLabels('income')"><option value="auto">自動</option><option value="age">年齢</option><option value="year">西暦</option></select></label></div>
+<div class="field"><label id="incomeStartLabel">開始<input id="incomeStart" type="text" inputmode="numeric" placeholder="65 / 2028"></label></div>
+<div class="field"><label id="incomeEndLabel">終了<input id="incomeEnd" type="text" inputmode="numeric" placeholder="80 / 2043"></label></div>
+<div class="period-hint">自動：4桁は西暦、それ以外は年齢として判断します。</div>
+</div>
 </div>
 <div class="actions"><button class="btn secondary" onclick="closeEditor('income')">キャンセル</button><button class="btn primary" onclick="saveIncome()">保存</button></div>
 </div>
@@ -369,17 +392,23 @@ select{padding-right:34px}
 <div class="editor" id="expenseEditor">
 <div class="editor-title" id="expenseEditorTitle">支出を追加</div>
 <div class="editor-grid">
-<div class="field full"><label>支出名<input id="expenseName" type="text" placeholder="例：生活費、車買替" oninput="validateExpense()"></label></div>
+<div class="inline-pair">
+<div class="field"><label>支出名<input id="expenseName" type="text" placeholder="例：生活費、車買替" oninput="validateExpense()"></label></div>
 <div class="field"><label>金額（万円）<input id="expenseAmount" type="number" placeholder="0" oninput="validateExpense()"></label></div>
-<div class="field"><label>金額単位
+</div>
+<div class="field full"><label>金額単位
 <select id="expenseUnit" onchange="expenseUnitChanged()">
 <option value="monthly">月額</option>
 <option value="yearly">年額</option>
 <option value="once">一時支出額</option>
 </select></label></div>
-<div class="field"><label>開始年齢<input id="expenseStart" type="number" oninput="validateExpense()"></label></div>
-<div class="field" id="expenseEndField"><label>終了年齢<input id="expenseEnd" type="number" oninput="validateExpense()"></label></div>
-<div class="field" id="expenseEndOnceField" style="display:none"><label>終了年齢<div class="readonly-box">－－</div></label></div>
+<div class="period-line" id="expensePeriodLine">
+<div class="field compact"><label>期間入力<select id="expensePeriodMode" onchange="updatePeriodLabels('expense');validateExpense()"><option value="auto">自動</option><option value="age">年齢</option><option value="year">西暦</option></select></label></div>
+<div class="field"><label id="expenseStartLabel">開始<input id="expenseStart" type="text" inputmode="numeric" placeholder="65 / 2028" oninput="validateExpense()"></label></div>
+<div class="field" id="expenseEndField"><label id="expenseEndLabel">終了<input id="expenseEnd" type="text" inputmode="numeric" placeholder="80 / 2043" oninput="validateExpense()"></label></div>
+<div class="field" id="expenseEndOnceField" style="display:none"><label>終了<div class="readonly-box">－－</div></label></div>
+<div class="period-hint">自動：4桁は西暦、それ以外は年齢として判断します。</div>
+</div>
 </div>
 <div class="error-msg" id="expenseError"></div>
 <div class="actions"><button class="btn secondary" onclick="closeEditor('expense')">キャンセル</button><button class="btn primary" id="expenseSaveButton" onclick="saveExpense()" disabled>保存</button></div>
@@ -464,14 +493,54 @@ function saveAsset(){
  if(editing.asset){assets=assets.map(function(x){return x.id===o.id?o:x})}else assets.push(o);
  closeEditor("asset");renderAssets();markDirty();recalculateAfterChange();recordHistory(editing.asset?"資産を変更しました":"資産を追加しました")
 }
+function updatePeriodLabels(type){
+ var mode=byId(type+"PeriodMode").value;
+ var suffix=mode==="age"?"（年齢）":mode==="year"?"（西暦）":"";
+ byId(type+"StartLabel").childNodes[0].nodeValue="開始"+suffix;
+ var endLabel=byId(type+"EndLabel");if(endLabel)endLabel.childNodes[0].nodeValue="終了"+suffix;
+}
+function periodKind(raw,mode){
+ var text=String(raw==null?"":raw).trim();
+ if(mode==="year")return "year";
+ if(mode==="age")return "age";
+ return /^\d{4}$/.test(text)?"year":"age";
+}
+function periodToAge(raw,mode){
+ var value=parseInt(String(raw).trim(),10);
+ if(!isFinite(value))return NaN;
+ return periodKind(raw,mode)==="year"?num("startAge")+(value-num("startYear")):value;
+}
+function periodDisplay(raw,mode){
+ var value=parseInt(String(raw).trim(),10);
+ if(!isFinite(value))return "—";
+ return value+(periodKind(raw,mode)==="year"?"年":"歳");
+}
+function itemRaw(item,key){
+ var rawKey=key+"Raw";
+ return item&&item[rawKey]!=null?item[rawKey]:(item?item[key]:"");
+}
+function itemMode(item){return item&&item.periodMode?item.periodMode:"age"}
+function itemStartAge(item){return periodToAge(itemRaw(item,"start"),itemMode(item))}
+function itemEndAge(item){return periodToAge(itemRaw(item,"end"),itemMode(item))}
+function periodRangeText(item){
+ var mode=itemMode(item),start=itemRaw(item,"start"),end=itemRaw(item,"end");
+ return periodDisplay(start,mode)+"～"+periodDisplay(end,mode);
+}
 function openIncomeEditor(id){
  editing.income=id||null;var a=id?incomes.find(function(x){return x.id===id}):null,s=num("startAge"),e=s+num("years")-1;
  byId("incomeEditorTitle").textContent=a?"収入を編集":"収入を追加";
- byId("incomeName").value=a?a.name:"";byId("incomeAmount").value=a?a.amount:"";byId("incomeStart").value=a?a.start:s;byId("incomeEnd").value=a?a.end:e;
+ byId("incomeName").value=a?a.name:"";byId("incomeAmount").value=a?a.amount:"";
+ byId("incomePeriodMode").value=a?itemMode(a):"auto";
+ byId("incomeStart").value=a?itemRaw(a,"start"):s;byId("incomeEnd").value=a?itemRaw(a,"end"):e;
+ updatePeriodLabels("income");
  byId("incomeListView").classList.add("hidden");byId("incomeSectionHead").style.display="none";byId("incomeEditor").classList.add("open")
 }
 function saveIncome(){
- var o={id:editing.income||nextId++,name:byId("incomeName").value||"名称未入力",amount:num("incomeAmount"),start:num("incomeStart"),end:num("incomeEnd")};
+ var mode=byId("incomePeriodMode").value,startRaw=byId("incomeStart").value.trim(),endRaw=byId("incomeEnd").value.trim();
+ var start=periodToAge(startRaw,mode),end=periodToAge(endRaw,mode);
+ if(!isFinite(start)||!isFinite(end)){alert("開始と終了を入力してください。");return}
+ if(end<start){alert("終了は開始以上にしてください。");return}
+ var o={id:editing.income||nextId++,name:byId("incomeName").value||"名称未入力",amount:num("incomeAmount"),periodMode:mode,startRaw:startRaw,endRaw:endRaw,start:start,end:end};
  if(editing.income){incomes=incomes.map(function(x){return x.id===o.id?o:x})}else incomes.push(o);
  closeEditor("income");renderIncomes();markDirty();recalculateAfterChange();recordHistory(editing.income?"収入を変更しました":"収入を追加しました")
 }
@@ -481,9 +550,10 @@ function openExpenseEditor(id){
  byId("expenseName").value=a?a.name:"";
  byId("expenseAmount").value=a?a.amount:"";
  byId("expenseUnit").value=a?(a.once?"once":a.unit):"monthly";
- byId("expenseStart").value=a?a.start:s;
- byId("expenseEnd").value=a&&!a.once?a.end:e;
- expenseUnitChanged();
+ byId("expensePeriodMode").value=a?itemMode(a):"auto";
+ byId("expenseStart").value=a?itemRaw(a,"start"):s;
+ byId("expenseEnd").value=a&&!a.once?itemRaw(a,"end"):e;
+ updatePeriodLabels("expense");expenseUnitChanged();
  byId("expenseListView").classList.add("hidden");
  byId("expenseSectionHead").style.display="none";
  byId("expenseEditor").classList.add("open");
@@ -493,16 +563,19 @@ function expenseUnitChanged(){
  var once=byId("expenseUnit").value==="once";
  byId("expenseEndField").style.display=once?"none":"block";
  byId("expenseEndOnceField").style.display=once?"block":"none";
+ byId("expensePeriodLine").classList.toggle("once",once);
  validateExpense();
 }
 function validateExpense(){
  var missing=[];
  if(!byId("expenseName").value.trim())missing.push("支出名");
  if(!(parseFloat(byId("expenseAmount").value)>0))missing.push("金額");
- if(!(parseFloat(byId("expenseStart").value)>=0))missing.push("開始年齢");
+ var mode=byId("expensePeriodMode").value;
+ var start=periodToAge(byId("expenseStart").value,mode),end=periodToAge(byId("expenseEnd").value,mode);
+ if(!isFinite(start)||start<0)missing.push("開始");
  var once=byId("expenseUnit").value==="once";
- if(!once&&!(parseFloat(byId("expenseEnd").value)>=0))missing.push("終了年齢");
- if(!once&&parseFloat(byId("expenseEnd").value)<parseFloat(byId("expenseStart").value))missing.push("終了年齢は開始年齢以上");
+ if(!once&&(!isFinite(end)||end<0))missing.push("終了");
+ if(!once&&isFinite(start)&&isFinite(end)&&end<start)missing.push("終了は開始以上");
  var msg=byId("expenseError"),btn=byId("expenseSaveButton");
  if(missing.length){
   msg.textContent=missing.join("、")+"が入力されていません。";
@@ -514,14 +587,18 @@ function validateExpense(){
 function saveExpense(){
  validateExpense();
  if(byId("expenseSaveButton").disabled)return;
- var once=byId("expenseUnit").value==="once";
+ var once=byId("expenseUnit").value==="once",mode=byId("expensePeriodMode").value;
+ var startRaw=byId("expenseStart").value.trim(),endRaw=once?null:byId("expenseEnd").value.trim();
  var o={
   id:editing.expense||nextId++,
   name:byId("expenseName").value.trim(),
   amount:num("expenseAmount"),
   unit:byId("expenseUnit").value,
-  start:num("expenseStart"),
-  end:once?null:num("expenseEnd"),
+  periodMode:mode,
+  startRaw:startRaw,
+  endRaw:endRaw,
+  start:periodToAge(startRaw,mode),
+  end:once?null:periodToAge(endRaw,mode),
   once:once
  };
  if(editing.expense){expenses=expenses.map(function(x){return x.id===o.id?o:x})}else expenses.push(o);
@@ -540,14 +617,14 @@ function renderAssets(){
  byId("assetList").innerHTML=assets.length?assets.map(function(a){return row("asset",a.id,a.name,"現在額",money(a.amount))}).join(""):'<div class="empty">資産がまだありません</div>';enableSwipeDelete()
 }
 function renderIncomes(){
- var sorted=incomes.slice().sort(function(a,b){return a.start-b.start});
- byId("incomeList").innerHTML=sorted.length?sorted.map(function(a){return row("income",a.id,a.name,a.start+"～"+a.end+"歳",money(a.amount)+"/年")}).join(""):'<div class="empty">収入がまだありません</div>';enableSwipeDelete()
+ var sorted=incomes.slice().sort(function(a,b){return itemStartAge(a)-itemStartAge(b)});
+ byId("incomeList").innerHTML=sorted.length?sorted.map(function(a){return row("income",a.id,a.name,periodRangeText(a),money(a.amount)+"/年")}).join(""):'<div class="empty">収入がまだありません</div>';enableSwipeDelete()
 }
 function renderExpenses(){
- var normal=expenses.filter(function(x){return !x.once}).sort(function(a,b){return a.start-b.start});
- var once=expenses.filter(function(x){return x.once}).sort(function(a,b){return a.start-b.start});
- var html=normal.map(function(a){return row("expense",a.id,a.name,a.start+"～"+a.end+"歳",money(a.amount)+(a.unit==="monthly"?"/月":"/年"))}).join("");
- if(once.length){html+='<div class="note" style="margin:0;border-radius:0">一時支出（年齢順）</div>'+once.map(function(a){return row("expense",a.id,a.name,a.start+"歳・一度だけ",money(a.amount))}).join("")}
+ var normal=expenses.filter(function(x){return !x.once}).sort(function(a,b){return itemStartAge(a)-itemStartAge(b)});
+ var once=expenses.filter(function(x){return x.once}).sort(function(a,b){return itemStartAge(a)-itemStartAge(b)});
+ var html=normal.map(function(a){return row("expense",a.id,a.name,periodRangeText(a),money(a.amount)+(a.unit==="monthly"?"/月":"/年"))}).join("");
+ if(once.length){html+='<div class="note" style="margin:0;border-radius:0">一時支出（年齢順）</div>'+once.map(function(a){return row("expense",a.id,a.name,periodDisplay(itemRaw(a,"start"),itemMode(a))+"・一度だけ",money(a.amount))}).join("")}
  byId("expenseList").innerHTML=html||'<div class="empty">支出がまだありません</div>';enableSwipeDelete()
 }
 function renderAllLists(){renderAssets();renderIncomes();renderExpenses();enableSwipeDelete()}
@@ -571,6 +648,20 @@ function enableSwipeDelete(){
 }
 function toggleBasicEditor(){
  byId("basicEditor").classList.toggle("open");
+}
+var basicRecalcTimer=null;
+function scheduleBasicRecalculation(){
+ markDirty();
+ if(basicRecalcTimer)clearTimeout(basicRecalcTimer);
+ basicRecalcTimer=setTimeout(function(){
+  basicRecalcTimer=null;
+  recalculateAfterChange();
+ },180);
+}
+function finishBasicChange(){
+ if(basicRecalcTimer){clearTimeout(basicRecalcTimer);basicRecalcTimer=null;}
+ recalculateAfterChange();
+ recordHistory("基本情報を変更しました");
 }
 function updateConditionBar(){
  byId("condAge").textContent=num("startAge")+"歳";
@@ -598,10 +689,10 @@ function buildResults(useInflation){
  var opening=assets.reduce(function(s,a){return s+a.amount},0),firstNeg=null,res=[];
  for(var y=0;y<years;y++){
   var age=startAge+y,inc=0,exp=0,evt=0;
-  incomes.forEach(function(a){if(age>=a.start&&age<=a.end)inc+=a.amount});
+  incomes.forEach(function(a){if(age>=itemStartAge(a)&&age<=itemEndAge(a))inc+=a.amount});
   expenses.forEach(function(a){
-   if(a.once){if(age===a.start)evt+=a.amount}
-   else if(age>=a.start&&age<=a.end){
+   if(a.once){if(age===itemStartAge(a))evt+=a.amount}
+   else if(age>=itemStartAge(a)&&age<=itemEndAge(a)){
     var annual=a.unit==="monthly"?a.amount*12:a.amount;
     exp+=annual*(useInflation?Math.pow(1+infl,y):1);
    }
@@ -779,7 +870,7 @@ function markFormalDirty(){
 
 function appState(){
  return {
-  version:25,
+  version:27,
   savedAt:new Date().toISOString(),
   basic:{startAge:num("startAge"),startYear:num("startYear"),years:num("years"),inflation:num("inflation")},
   assets:assets,
