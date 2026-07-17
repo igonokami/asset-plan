@@ -205,6 +205,10 @@ h1{font-size:20px;margin:0 0 3px}h2{font-size:18px;margin:0 0 6px}.lead,.note{fo
 .condition-item .c-value{display:block;font-size:13px;font-weight:900;color:#172033;margin-top:1px;white-space:nowrap}
 .basic-editor{display:none;border:1px solid var(--line);border-radius:9px;padding:7px;margin-bottom:6px;background:#f8fafc}
 .basic-editor.open{display:block}
+.app-info{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 10px;align-items:center;margin:0 0 8px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#f8fafc;font-size:12px}
+.app-info-label{color:var(--muted);font-weight:800;white-space:nowrap}
+.app-info-value{min-width:0;font-weight:800;color:#334155;overflow-wrap:anywhere}
+@media(max-width:420px){.app-info{font-size:11px;gap:4px 7px;padding:7px 8px}}
 .dashboard-chart-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:3px}
 .dashboard-chart-head h2{margin:0!important;font-size:16px!important}
 .mini-btn{border:1px solid var(--line);background:#fff;color:var(--accent);border-radius:8px;padding:6px 8px;font-size:10px;font-weight:800;white-space:nowrap}
@@ -331,6 +335,10 @@ select{padding-right:34px}
 <div class="field"><label>計算期間<input id="years" type="number" value="30" oninput="scheduleBasicRecalculation()" onchange="finishBasicChange()"></label></div>
 <div class="field"><label>インフレ率（％）<input id="inflation" type="number" step="0.1" value="1" oninput="scheduleBasicRecalculation()" onchange="finishBasicChange()"></label></div>
 </div></div>
+<div class="app-info" aria-label="アプリ情報">
+  <div class="app-info-label">バージョン</div><div class="app-info-value" id="appVersion">v28</div>
+  <div class="app-info-label">使用中データ</div><div class="app-info-value" id="activeFileName">JSON未読込（ブラウザ内データ）</div>
+</div>
 <div class="dashboard-chart-head">
   <h2>資産推移</h2>
   <button class="mini-btn" onclick="toggleDetails()">詳細計算結果</button>
@@ -833,17 +841,21 @@ var META_KEY="asset-plan-v17-meta";
 var suspendHistory=false;
 var formalSavedAt=null;
 var hasUnsavedChanges=true;
+var activeFileName="";
+var APP_VERSION=28;
 
 function loadMeta(){
  try{
   var m=JSON.parse(localStorage.getItem(META_KEY)||"{}");
   formalSavedAt=m.formalSavedAt||null;
   hasUnsavedChanges=m.hasUnsavedChanges!==false;
- }catch(e){formalSavedAt=null;hasUnsavedChanges=true}
+  activeFileName=m.activeFileName||"";
+ }catch(e){formalSavedAt=null;hasUnsavedChanges=true;activeFileName=""}
  updateSaveStatus();
+ updateAppInfo();
 }
 function storeMeta(){
- try{localStorage.setItem(META_KEY,JSON.stringify({formalSavedAt:formalSavedAt,hasUnsavedChanges:hasUnsavedChanges}))}catch(e){}
+ try{localStorage.setItem(META_KEY,JSON.stringify({formalSavedAt:formalSavedAt,hasUnsavedChanges:hasUnsavedChanges,activeFileName:activeFileName}))}catch(e){}
 }
 function updateSaveStatus(){
  var chip=byId("saveStatusChip"),time=byId("lastSaveTime");
@@ -862,6 +874,11 @@ function updateSaveStatus(){
   time.textContent="正式保存：まだありません";
  }
 }
+function updateAppInfo(){
+ var v=byId("appVersion"),f=byId("activeFileName");
+ if(v)v.textContent="v"+APP_VERSION;
+ if(f)f.textContent=activeFileName||"JSON未読込（ブラウザ内データ）";
+}
 function markFormalDirty(){
  if(suspendHistory)return;
  hasUnsavedChanges=true;
@@ -870,7 +887,7 @@ function markFormalDirty(){
 
 function appState(){
  return {
-  version:27,
+  version:28,
   savedAt:new Date().toISOString(),
   basic:{startAge:num("startAge"),startYear:num("startYear"),years:num("years"),inflation:num("inflation")},
   assets:assets,
@@ -936,7 +953,7 @@ async function saveDataFile(){
  if(file&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
   try{
    await navigator.share({files:[file],title:"資産計画データ",text:"資産計画の正式保存データです。"});
-   completeFormalSave(now,"端末で選択した場所に保存しました");
+   completeFormalSave(now,"端末で選択した場所に保存しました",filename);
    return;
   }catch(e){
    if(e&&e.name==="AbortError")return;
@@ -949,15 +966,15 @@ async function saveDataFile(){
   a.href=url;a.download=filename;
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(function(){URL.revokeObjectURL(url)},1000);
-  completeFormalSave(now,"ダウンロード先に保存しました");
+  completeFormalSave(now,"ダウンロード先に保存しました",filename);
  }catch(e){
   alert("正式保存を開始できませんでした。ブラウザのダウンロード設定をご確認ください。");
  }
 }
-function completeFormalSave(now,message){
- formalSavedAt=now;hasUnsavedChanges=false;storeMeta();updateSaveStatus();
+function completeFormalSave(now,message,filename){
+ formalSavedAt=now;hasUnsavedChanges=false;activeFileName=filename||activeFileName;storeMeta();updateSaveStatus();updateAppInfo();
  autoStore();recordHistory("正式保存しました");
- var help=byId("formalSaveHelp");if(help)help.textContent=message+"。ファイル名：資産計画データ_"+now.slice(0,10)+".json";
+ var help=byId("formalSaveHelp");if(help)help.textContent=message+"。ファイル名："+(filename||("資産計画データ_"+now.slice(0,10)+".json"));
 }
 function chooseDataFile(){byId("dataFile").click()}
 function loadDataFile(input){
@@ -966,7 +983,7 @@ function loadDataFile(input){
  reader.onload=function(){
   try{
    var state=JSON.parse(reader.result);
-   if(applyState(state,true)){closeSettings();showTab("basic")}
+   if(applyState(state,true)){activeFileName=file.name||"読込データ.json";storeMeta();updateAppInfo();closeSettings();showTab("basic")}
   }catch(e){alert("JSONデータを読み込めませんでした。")}
   input.value="";
  };
@@ -974,9 +991,9 @@ function loadDataFile(input){
 }
 function resetData(){
  if(!confirm("入力した資産・収入・支出をすべて初期化しますか？"))return;
- assets=[];incomes=[];expenses=[];nextId=1;
+ assets=[];incomes=[];expenses=[];nextId=1;activeFileName="";
  byId("startAge").value=60;byId("startYear").value=new Date().getFullYear();byId("years").value=30;byId("inflation").value=1;
- renderAllLists();isDirty=true;calculate();hasUnsavedChanges=true;storeMeta();updateSaveStatus();recordHistory("データを初期化しました");closeSettings();showTab("basic");
+ renderAllLists();isDirty=true;calculate();hasUnsavedChanges=true;storeMeta();updateSaveStatus();updateAppInfo();recordHistory("データを初期化しました");closeSettings();showTab("basic");
 }
 function toggleHistory(){byId("historyBox").classList.toggle("open");renderHistory()}
 function getHistory(){
@@ -1005,6 +1022,7 @@ if(!loadAutoStore()){
  renderAllLists();calculate();autoStore();
 }
 showTab("basic");
+updateAppInfo();
 
 window.addEventListener("beforeunload",function(e){
  if(!hasUnsavedChanges)return;
