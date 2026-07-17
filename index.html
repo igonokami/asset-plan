@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>わが家の資産計画 v24</title>
+<title>わが家の資産計画 v25</title>
 <style>
 :root{--bg:#f3f6fa;--card:#fff;--text:#172033;--muted:#697386;--line:#dfe6ef;--accent:#1f6f5f;--soft:#e7f2ef;--danger:#b42318}
 *{box-sizing:border-box}
@@ -393,13 +393,14 @@ select{padding-right:34px}
 <div class="settings-panel" id="settingsPanel" onclick="if(event.target===this)closeSettings()">
   <div class="settings-card">
     <div class="settings-head"><h2>設定</h2><button class="closex" onclick="closeSettings()">×</button></div>
-    <div class="backup-note">ブラウザ内の自動保存は作業用です。キャッシュやサイトデータを削除すると消える場合があります。大切なデータは「データ保存」でJSONファイルに正式保存してください。</div>
+    <div class="backup-note">ブラウザ内の自動保存は作業用です。大切なデータは「正式保存」でJSONファイルとして端末に保存してください。iPhoneでは共有画面から「ファイルに保存」を選べます。</div>
 <div class="settings-menu">
-      <button onclick="saveDataFile()">💾 データ保存</button>
-      <button onclick="chooseDataFile()">📂 データ読込</button>
+      <button onclick="saveDataFile()">💾 正式保存（JSON）</button>
+      <button onclick="chooseDataFile()">📂 正式保存データを読込</button>
       <button onclick="toggleHistory()">🕘 変更履歴</button>
       <button class="danger-action" onclick="resetData()">♻ データ初期化</button>
     </div>
+    <div class="backup-note" id="formalSaveHelp" style="margin-top:9px">保存先は端末側で選びます。iPhoneは「ファイルに保存」、Android・PCはダウンロード先を確認してください。</div>
     <input class="hidden-file" id="dataFile" type="file" accept=".json,application/json" onchange="loadDataFile(this)">
     <div class="history-box" id="historyBox"><div class="history-list" id="historyList"></div></div>
   </div>
@@ -778,7 +779,7 @@ function markFormalDirty(){
 
 function appState(){
  return {
-  version:17,
+  version:25,
   savedAt:new Date().toISOString(),
   basic:{startAge:num("startAge"),startYear:num("startYear"),years:num("years"),inflation:num("inflation")},
   assets:assets,
@@ -831,16 +832,41 @@ function recordHistory(action){
 }
 function openSettings(){byId("settingsPanel").classList.add("open");renderHistory()}
 function closeSettings(){byId("settingsPanel").classList.remove("open");byId("historyBox").classList.remove("open")}
-function saveDataFile(){
+async function saveDataFile(){
  var now=new Date().toISOString();
  var state=appState();state.formalSavedAt=now;
  var data=JSON.stringify(state,null,2);
+ var filename="資産計画データ_"+now.slice(0,10)+".json";
  var blob=new Blob([data],{type:"application/json"});
- var url=URL.createObjectURL(blob),a=document.createElement("a");
- a.href=url;a.download="資産計画データ_"+now.slice(0,10)+".json";
- document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+ var file;
+ try{file=new File([blob],filename,{type:"application/json"})}catch(e){file=null}
+
+ // スマホでは共有画面を開き、iPhoneの「ファイルに保存」など保存先を選べるようにする。
+ if(file&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+  try{
+   await navigator.share({files:[file],title:"資産計画データ",text:"資産計画の正式保存データです。"});
+   completeFormalSave(now,"端末で選択した場所に保存しました");
+   return;
+  }catch(e){
+   if(e&&e.name==="AbortError")return;
+   // 共有に失敗した場合は通常のダウンロードへ進む。
+  }
+ }
+
+ try{
+  var url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(url)},1000);
+  completeFormalSave(now,"ダウンロード先に保存しました");
+ }catch(e){
+  alert("正式保存を開始できませんでした。ブラウザのダウンロード設定をご確認ください。");
+ }
+}
+function completeFormalSave(now,message){
  formalSavedAt=now;hasUnsavedChanges=false;storeMeta();updateSaveStatus();
- recordHistory("正式保存しました");
+ autoStore();recordHistory("正式保存しました");
+ var help=byId("formalSaveHelp");if(help)help.textContent=message+"。ファイル名：資産計画データ_"+now.slice(0,10)+".json";
 }
 function chooseDataFile(){byId("dataFile").click()}
 function loadDataFile(input){
