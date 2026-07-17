@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>わが家の資産計画 v26</title>
+<title>わが家の資産計画 v29</title>
 <style>
 :root{--bg:#f3f6fa;--card:#fff;--text:#172033;--muted:#697386;--line:#dfe6ef;--accent:#1f6f5f;--soft:#e7f2ef;--danger:#b42318}
 *{box-sizing:border-box}
@@ -43,14 +43,14 @@ h1{font-size:20px;margin:0 0 3px}h2{font-size:18px;margin:0 0 6px}.lead,.note{fo
 
 /* v26: related fields stay on one line */
 .inline-pair{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(105px,.85fr);gap:8px;grid-column:1/-1;align-items:end}
-.period-line{display:grid;grid-template-columns:minmax(86px,.75fr) minmax(0,1fr) minmax(0,1fr);gap:7px;grid-column:1/-1;align-items:end}
-.period-line.once{grid-template-columns:minmax(86px,.75fr) minmax(0,1fr)}
+.period-line{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px;grid-column:1/-1;align-items:end}
+.period-line.once{grid-template-columns:minmax(0,1fr)}
 .field.compact label{display:block}
 .period-hint{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-2px;line-height:1.45}
 @media(max-width:420px){
  .inline-pair{grid-template-columns:minmax(0,1.28fr) minmax(100px,.72fr);gap:6px}
- .period-line{grid-template-columns:88px minmax(0,1fr) minmax(0,1fr);gap:5px}
- .period-line.once{grid-template-columns:88px minmax(0,1fr)}
+ .period-line{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5px}
+ .period-line.once{grid-template-columns:minmax(0,1fr)}
  .inline-pair .field label,.period-line .field label{font-size:11px}
  .inline-pair input,.period-line input,.period-line select{padding-left:7px;padding-right:7px}
 }
@@ -205,10 +205,11 @@ h1{font-size:20px;margin:0 0 3px}h2{font-size:18px;margin:0 0 6px}.lead,.note{fo
 .condition-item .c-value{display:block;font-size:13px;font-weight:900;color:#172033;margin-top:1px;white-space:nowrap}
 .basic-editor{display:none;border:1px solid var(--line);border-radius:9px;padding:7px;margin-bottom:6px;background:#f8fafc}
 .basic-editor.open{display:block}
-.app-info{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 10px;align-items:center;margin:0 0 8px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#f8fafc;font-size:12px}
-.app-info-label{color:var(--muted);font-weight:800;white-space:nowrap}
-.app-info-value{min-width:0;font-weight:800;color:#334155;overflow-wrap:anywhere}
-@media(max-width:420px){.app-info{font-size:11px;gap:4px 7px;padding:7px 8px}}
+.header-meta{display:flex;flex-wrap:wrap;gap:3px 8px;align-items:center;margin-top:3px;font-size:11px;line-height:1.35;color:var(--muted)}
+.header-meta .meta-version{font-weight:900;color:#475569;white-space:nowrap}
+.header-meta .meta-file{min-width:0;overflow-wrap:anywhere}
+.header-meta .meta-sep{color:#a0a9b6}
+@media(max-width:420px){.header-meta{font-size:10px;gap:2px 6px}.header-meta .meta-sep{display:none}.header-meta .meta-file{flex-basis:100%}}
 .dashboard-chart-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:3px}
 .dashboard-chart-head h2{margin:0!important;font-size:16px!important}
 .mini-btn{border:1px solid var(--line);background:#fff;color:var(--accent);border-radius:8px;padding:6px 8px;font-size:10px;font-weight:800;white-space:nowrap}
@@ -227,7 +228,7 @@ h1{font-size:20px;margin:0 0 3px}h2{font-size:18px;margin:0 0 6px}.lead,.note{fo
 }
 
 
-/* v24: navigation, duplicate-title and text-clipping fixes */
+/* v29: persistent navigation, compact header metadata, automatic period detection */
 .section-guide{margin:0 0 8px}
 .section-guide .note{margin:0;line-height:1.65}
 
@@ -245,7 +246,7 @@ select{padding-right:34px}
 .actions .btn{min-height:46px;line-height:1.3;padding:11px 16px}
 
 .bottom-nav{display:none}
-@media(max-width:700px){
+@media(max-width:1000px){
   /* On phones the four navigation items move to the bottom; desktop keeps the top tabs. */
   .topnav,.progress{display:none}
   main{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
@@ -288,7 +289,7 @@ select{padding-right:34px}
   }
   .field label{font-size:12px;line-height:1.5}
 }
-@media(min-width:701px){
+@media(min-width:1001px){
   .bottom-nav{display:none!important}
 }
 
@@ -298,7 +299,9 @@ select{padding-right:34px}
 <main>
 <section class="card">
 <div class="header-top">
-  <div class="header-copy"><h1>わが家の資産計画</h1></div>
+  <div class="header-copy"><h1>わが家の資産計画</h1>
+    <div class="header-meta" aria-label="アプリ情報"><span class="meta-version" id="appVersion">v29</span><span class="meta-sep">｜</span><span class="meta-file">使用中データ：<span id="activeFileName">JSON未読込（ブラウザ内データ）</span></span></div>
+  </div>
   <div class="header-actions">
     <button class="gear" onclick="openSettings()" aria-label="設定">⚙</button>
     <div class="header-save">
@@ -335,10 +338,6 @@ select{padding-right:34px}
 <div class="field"><label>計算期間<input id="years" type="number" value="30" oninput="scheduleBasicRecalculation()" onchange="finishBasicChange()"></label></div>
 <div class="field"><label>インフレ率（％）<input id="inflation" type="number" step="0.1" value="1" oninput="scheduleBasicRecalculation()" onchange="finishBasicChange()"></label></div>
 </div></div>
-<div class="app-info" aria-label="アプリ情報">
-  <div class="app-info-label">バージョン</div><div class="app-info-value" id="appVersion">v28</div>
-  <div class="app-info-label">使用中データ</div><div class="app-info-value" id="activeFileName">JSON未読込（ブラウザ内データ）</div>
-</div>
 <div class="dashboard-chart-head">
   <h2>資産推移</h2>
   <button class="mini-btn" onclick="toggleDetails()">詳細計算結果</button>
@@ -384,7 +383,7 @@ select{padding-right:34px}
 <div class="field"><label>年額（万円）<input id="incomeAmount" type="number" placeholder="0"></label></div>
 </div>
 <div class="period-line">
-<div class="field compact"><label>期間入力<select id="incomePeriodMode" onchange="updatePeriodLabels('income')"><option value="auto">自動</option><option value="age">年齢</option><option value="year">西暦</option></select></label></div>
+<select id="incomePeriodMode" class="hidden-file" aria-hidden="true"><option value="auto" selected>自動</option></select>
 <div class="field"><label id="incomeStartLabel">開始<input id="incomeStart" type="text" inputmode="numeric" placeholder="65 / 2028"></label></div>
 <div class="field"><label id="incomeEndLabel">終了<input id="incomeEnd" type="text" inputmode="numeric" placeholder="80 / 2043"></label></div>
 <div class="period-hint">自動：4桁は西暦、それ以外は年齢として判断します。</div>
@@ -411,7 +410,7 @@ select{padding-right:34px}
 <option value="once">一時支出額</option>
 </select></label></div>
 <div class="period-line" id="expensePeriodLine">
-<div class="field compact"><label>期間入力<select id="expensePeriodMode" onchange="updatePeriodLabels('expense');validateExpense()"><option value="auto">自動</option><option value="age">年齢</option><option value="year">西暦</option></select></label></div>
+<select id="expensePeriodMode" class="hidden-file" aria-hidden="true"><option value="auto" selected>自動</option></select>
 <div class="field"><label id="expenseStartLabel">開始<input id="expenseStart" type="text" inputmode="numeric" placeholder="65 / 2028" oninput="validateExpense()"></label></div>
 <div class="field" id="expenseEndField"><label id="expenseEndLabel">終了<input id="expenseEnd" type="text" inputmode="numeric" placeholder="80 / 2043" oninput="validateExpense()"></label></div>
 <div class="field" id="expenseEndOnceField" style="display:none"><label>終了<div class="readonly-box">－－</div></label></div>
