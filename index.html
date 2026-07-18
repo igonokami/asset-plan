@@ -577,11 +577,19 @@ function closeEditor(type,force){
  var head=byId(type+"SectionHead");if(head)head.style.display="block";
  editing[type]=null
 }
+function focusFirstFieldWhenAdding(id,fieldId){
+ if(id)return;
+ window.setTimeout(function(){
+  var field=byId(fieldId);
+  if(field){field.focus();field.setSelectionRange(0,field.value.length)}
+ },0);
+}
 function openAssetEditor(id){
  editing.asset=id||null;var a=id?assets.find(function(x){return x.id===id}):null;
  byId("assetEditorTitle").textContent=a?"資産を編集":"資産を追加";
  byId("assetName").value=a?a.name:"";byId("assetAmount").value=a?a.amount:"";
- byId("assetListView").classList.add("hidden");byId("assetSectionHead").style.display="none";byId("assetEditor").classList.add("open")
+ byId("assetListView").classList.add("hidden");byId("assetSectionHead").style.display="none";byId("assetEditor").classList.add("open");
+ focusFirstFieldWhenAdding(id,"assetName")
 }
 function saveAsset(){
  var wasEditing=!!editing.asset;
@@ -655,7 +663,8 @@ function openIncomeEditor(id){
  byId("incomePeriodMode").value=a?itemMode(a):"auto";
  byId("incomeStart").value=a?itemRaw(a,"start"):s;byId("incomeEnd").value=a?itemRaw(a,"end"):"";
  updatePeriodLabels("income");validateIncome();
- byId("incomeListView").classList.add("hidden");byId("incomeSectionHead").style.display="none";byId("incomeEditor").classList.add("open")
+ byId("incomeListView").classList.add("hidden");byId("incomeSectionHead").style.display="none";byId("incomeEditor").classList.add("open");
+ focusFirstFieldWhenAdding(id,"incomeName")
 }
 function validateIncome(){
  var err=validatePeriodPair(byId("incomeStart").value.trim(),byId("incomeEnd").value.trim(),true);
@@ -687,6 +696,7 @@ function openExpenseEditor(id){
  byId("expenseSectionHead").style.display="none";
  byId("expenseEditor").classList.add("open");
  validateExpense();
+ focusFirstFieldWhenAdding(id,"expenseName");
 }
 function expenseUnitChanged(){
  var once=byId("expenseUnit").value==="once";
@@ -971,7 +981,7 @@ function toggleDetails(){var d=byId("details"),o=d.classList.toggle("open");byId
 
 const APP_CONFIG = Object.freeze({
  name:"わが家の資産計画",
- version:"v35",
+ version:"v36",
  storage:Object.freeze({
   work:"asset-plan-work",
   history:"asset-plan-history",
