@@ -31,6 +31,9 @@ h1{font-size:20px;margin:0 0 3px}h2{font-size:18px;margin:0 0 6px}.lead,.note{fo
 .item-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .item-value{text-align:right;font-size:14px;font-weight:850;white-space:nowrap}.editbtn{border:0;background:transparent;padding:0;text-align:left;color:inherit;width:100%}
 .empty{padding:16px;text-align:center;color:var(--muted);font-size:13px}
+.empty-action{padding:24px 14px;text-align:center;background:#fbfcfd}
+.empty-action-title{font-size:15px;font-weight:850;color:var(--text);margin-bottom:10px}
+.empty-add-btn{border:0;border-radius:10px;padding:11px 22px;background:var(--soft);color:var(--accent);font-weight:900;min-width:150px}
 .editor{display:none}.editor.open{display:block}.listview.hidden{display:none}
 .editor-title{font-size:18px;font-weight:900;line-height:1.35;margin:0 0 10px;overflow-wrap:anywhere}.editor-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}.full{grid-column:1/-1}
 .checkline{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;font-weight:700}.checkline input{width:20px;height:20px}
@@ -46,6 +49,7 @@ h1{font-size:20px;margin:0 0 3px}h2{font-size:18px;margin:0 0 6px}.lead,.note{fo
 .period-line{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px;grid-column:1/-1;align-items:end}
 .period-line.once{grid-template-columns:minmax(0,1fr)}
 .field.compact label{display:block}
+.period-help{grid-column:1/-1;font-size:11px;line-height:1.55;color:var(--muted);background:#f7f9fc;border-radius:8px;padding:8px 10px}
 .period-hint{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-2px;line-height:1.45}
 @media(max-width:420px){
  .inline-pair{grid-template-columns:minmax(0,1.28fr) minmax(100px,.72fr);gap:6px}
@@ -433,12 +437,13 @@ select{padding-right:34px}
 </div>
 <div class="period-line">
 <select id="incomePeriodMode" class="hidden-file" aria-hidden="true"><option value="auto" selected>自動</option></select>
-<div class="field"><label id="incomeStartLabel">開始<input id="incomeStart" type="text" inputmode="numeric" placeholder="65 / 2028"></label></div>
-<div class="field"><label id="incomeEndLabel">終了<input id="incomeEnd" type="text" inputmode="numeric" placeholder="80 / 2043"></label></div>
-<div class="period-hint">自動：4桁は西暦、それ以外は年齢として判断します。</div>
+<div class="field"><label id="incomeStartLabel">開始<input id="incomeStart" type="text" inputmode="numeric" placeholder="65 / 2028" oninput="validateIncome()"></label></div>
+<div class="field"><label id="incomeEndLabel">終了<input id="incomeEnd" type="text" inputmode="numeric" placeholder="999" oninput="validateIncome()"></label></div>
+<div class="period-help"><b>入力方法</b><br>1～3桁：年齢（例：65、100）／4桁：西暦（例：2026、2035）<br>終了欄の999または未入力は「終了なし（継続）」です。<br>開始と終了は、年齢同士または西暦同士で入力してください。</div>
 </div>
 </div>
-<div class="actions"><button class="btn secondary" onclick="closeEditor('income')">キャンセル</button><button class="btn primary" onclick="saveIncome()">保存</button></div>
+<div class="error-msg" id="incomeError"></div>
+<div class="actions"><button class="btn secondary" onclick="closeEditor('income')">キャンセル</button><button class="btn primary" id="incomeSaveButton" onclick="saveIncome()">保存</button></div>
 </div>
 </section>
 
@@ -461,9 +466,9 @@ select{padding-right:34px}
 <div class="period-line" id="expensePeriodLine">
 <select id="expensePeriodMode" class="hidden-file" aria-hidden="true"><option value="auto" selected>自動</option></select>
 <div class="field"><label id="expenseStartLabel">開始<input id="expenseStart" type="text" inputmode="numeric" placeholder="65 / 2028" oninput="validateExpense()"></label></div>
-<div class="field" id="expenseEndField"><label id="expenseEndLabel">終了<input id="expenseEnd" type="text" inputmode="numeric" placeholder="80 / 2043" oninput="validateExpense()"></label></div>
+<div class="field" id="expenseEndField"><label id="expenseEndLabel">終了<input id="expenseEnd" type="text" inputmode="numeric" placeholder="999" oninput="validateExpense()"></label></div>
 <div class="field" id="expenseEndOnceField" style="display:none"><label>終了<div class="readonly-box">－－</div></label></div>
-<div class="period-hint">自動：4桁は西暦、それ以外は年齢として判断します。</div>
+<div class="period-help"><b>入力方法</b><br>1～3桁：年齢（例：65、100）／4桁：西暦（例：2026、2035）<br>終了欄の999または未入力は「終了なし（継続）」です。<br>開始と終了は、年齢同士または西暦同士で入力してください。</div>
 </div>
 </div>
 <div class="error-msg" id="expenseError"></div>
@@ -512,9 +517,13 @@ function showTab(name){
  for(var j=0;j<ts.length;j++)ts[j].classList.toggle("active",ts[j].dataset.tab===name);
  for(var k=0;k<bs.length;k++)bs[k].classList.toggle("active",bs[k].dataset.tab===name);
  byId("panel-"+name).classList.add("active");
- closeAllEditors();
+ closeAllEditors(true);
  if(name==="basic"&&lastResults.length)drawAll();
- var fab=byId("fab");fab.classList.toggle("show",name==="assets"||name==="income"||name==="expense");fab.setAttribute("data-tab",name);
+ var fab=byId("fab");
+ var isEntryTab=name==="assets"||name==="income"||name==="expense";
+ fab.classList.toggle("show",isEntryTab&&itemCountForTab(name)>0);
+ fab.setAttribute("data-tab",name);
+ if(isEntryTab&&itemCountForTab(name)===0)openEmptyEditorForTab(name);
  var activePanel=byId("panel-"+name);if(activePanel)activePanel.scrollTop=0;
  window.scrollTo(0,0)
 }
@@ -524,6 +533,10 @@ function fabAdd(){
  if(tab==="income")openIncomeEditor();
  if(tab==="expense")openExpenseEditor();
 }
+function updateFabForActiveTab(){
+ var fab=byId("fab"),tab=fab.getAttribute("data-tab");
+ fab.classList.toggle("show",(tab==="assets"||tab==="income"||tab==="expense")&&itemCountForTab(tab)>0);
+}
 function updateProgress(){
  var ok=[true,assets.length>0,incomes.length>0,expenses.length>0],p=byId("progress"),tabs=document.querySelectorAll(".tabbtn");
  p.innerHTML="";
@@ -532,8 +545,33 @@ function updateProgress(){
   if(tabs[i])tabs[i].classList.toggle("done",ok[i]);
  }
 }
-function closeAllEditors(){["asset","income","expense"].forEach(function(x){closeEditor(x)})}
-function closeEditor(type){
+function itemCountForTab(tab){
+ if(tab==="assets")return assets.length;
+ if(tab==="income")return incomes.length;
+ if(tab==="expense")return expenses.length;
+ return 0;
+}
+function typeIsEmpty(type){
+ return type==="asset"?assets.length===0:type==="income"?incomes.length===0:expenses.length===0;
+}
+function activeEntryType(){
+ var panel=document.querySelector(".panel.active");
+ if(!panel)return "";
+ return panel.id==="panel-assets"?"asset":panel.id==="panel-income"?"income":panel.id==="panel-expense"?"expense":"";
+}
+function openEmptyEditorForTab(tab){
+ if(tab==="assets")openAssetEditor();
+ if(tab==="income")openIncomeEditor();
+ if(tab==="expense")openExpenseEditor();
+}
+function closeAllEditors(force){["asset","income","expense"].forEach(function(x){closeEditor(x,force)})}
+function closeEditor(type,force){
+ if(!force&&typeIsEmpty(type)&&activeEntryType()===type){
+  if(type==="asset")openAssetEditor();
+  if(type==="income")openIncomeEditor();
+  if(type==="expense")openExpenseEditor();
+  return;
+ }
  byId(type+"Editor").classList.remove("open");
  byId(type+"ListView").classList.remove("hidden");
  var head=byId(type+"SectionHead");if(head)head.style.display="block";
@@ -546,9 +584,10 @@ function openAssetEditor(id){
  byId("assetListView").classList.add("hidden");byId("assetSectionHead").style.display="none";byId("assetEditor").classList.add("open")
 }
 function saveAsset(){
+ var wasEditing=!!editing.asset;
  var o={id:editing.asset||nextId++,name:byId("assetName").value||"名称未入力",amount:num("assetAmount")};
  if(editing.asset){assets=assets.map(function(x){return x.id===o.id?o:x})}else assets.push(o);
- closeEditor("asset");renderAssets();markDirty();recalculateAfterChange();recordHistory(editing.asset?"資産を変更しました":"資産を追加しました")
+ closeEditor("asset");renderAssets();updateFabForActiveTab();markDirty();recalculateAfterChange();recordHistory(wasEditing?"資産を変更しました":"資産を追加しました")
 }
 function updatePeriodLabels(type){
  var mode=byId(type+"PeriodMode").value;
@@ -562,54 +601,87 @@ function periodKind(raw,mode){
  if(mode==="age")return "age";
  return /^\d{4}$/.test(text)?"year":"age";
 }
-function periodToAge(raw,mode){
- var value=parseInt(String(raw).trim(),10);
- if(!isFinite(value))return NaN;
- return periodKind(raw,mode)==="year"?num("startAge")+(value-num("startYear")):value;
+function periodInputKind(raw,isEnd){
+ var text=String(raw==null?"":raw).trim();
+ if(isEnd&&(text===""||text==="999"))return "open";
+ if(!/^\d+$/.test(text))return "invalid";
+ if(text.length>=1&&text.length<=3)return text==="999"?"invalid":"age";
+ if(text.length===4)return "year";
+ return "invalid";
 }
-function periodDisplay(raw,mode){
- var value=parseInt(String(raw).trim(),10);
+function normalizedEndRaw(raw){
+ var text=String(raw==null?"":raw).trim();
+ return text===""?"999":text;
+}
+function validatePeriodPair(startRaw,endRaw,allowOpenEnd){
+ var sk=periodInputKind(startRaw,false),ek=periodInputKind(endRaw,true);
+ if(sk==="invalid")return "開始は1～3桁の年齢、または4桁の西暦で入力してください。";
+ if(ek==="invalid")return "終了は1～3桁の年齢、4桁の西暦、または999で入力してください。";
+ if(ek==="open"&&allowOpenEnd)return "";
+ if(sk!==ek)return "開始と終了は同じ種類で入力してください（年齢同士、または西暦同士）。";
+ var sv=parseInt(startRaw,10),ev=parseInt(endRaw,10);
+ if(ev<sv)return "終了は開始以上にしてください。";
+ return "";
+}
+function periodToAge(raw,mode,isEnd){
+ var text=String(raw==null?"":raw).trim();
+ if(isEnd&&(text===""||text==="999"))return Infinity;
+ var value=parseInt(text,10);
+ if(!isFinite(value))return NaN;
+ return periodKind(text,mode)==="year"?num("startAge")+(value-num("startYear")):value;
+}
+function periodDisplay(raw,mode,isEnd){
+ var text=String(raw==null?"":raw).trim();
+ if(isEnd&&(text===""||text==="999"))return "終了なし";
+ var value=parseInt(text,10);
  if(!isFinite(value))return "—";
- return value+(periodKind(raw,mode)==="year"?"年":"歳");
+ return value+(periodKind(text,mode)==="year"?"年":"歳");
 }
 function itemRaw(item,key){
  var rawKey=key+"Raw";
  return item&&item[rawKey]!=null?item[rawKey]:(item?item[key]:"");
 }
-function itemMode(item){return item&&item.periodMode?item.periodMode:"age"}
-function itemStartAge(item){return periodToAge(itemRaw(item,"start"),itemMode(item))}
-function itemEndAge(item){return periodToAge(itemRaw(item,"end"),itemMode(item))}
+function itemMode(item){return item&&item.periodMode?item.periodMode:"auto"}
+function itemStartAge(item){return periodToAge(itemRaw(item,"start"),itemMode(item),false)}
+function itemEndAge(item){return periodToAge(itemRaw(item,"end"),itemMode(item),true)}
 function periodRangeText(item){
  var mode=itemMode(item),start=itemRaw(item,"start"),end=itemRaw(item,"end");
- return periodDisplay(start,mode)+"～"+periodDisplay(end,mode);
+ return periodDisplay(start,mode,false)+"～"+periodDisplay(end,mode,true);
 }
 function openIncomeEditor(id){
- editing.income=id||null;var a=id?incomes.find(function(x){return x.id===id}):null,s=num("startAge"),e=s+num("years")-1;
+ editing.income=id||null;var a=id?incomes.find(function(x){return x.id===id}):null,s=num("startAge");
  byId("incomeEditorTitle").textContent=a?"収入を編集":"収入を追加";
  byId("incomeName").value=a?a.name:"";byId("incomeAmount").value=a?a.amount:"";
  byId("incomePeriodMode").value=a?itemMode(a):"auto";
- byId("incomeStart").value=a?itemRaw(a,"start"):s;byId("incomeEnd").value=a?itemRaw(a,"end"):e;
- updatePeriodLabels("income");
+ byId("incomeStart").value=a?itemRaw(a,"start"):s;byId("incomeEnd").value=a?itemRaw(a,"end"):"";
+ updatePeriodLabels("income");validateIncome();
  byId("incomeListView").classList.add("hidden");byId("incomeSectionHead").style.display="none";byId("incomeEditor").classList.add("open")
 }
+function validateIncome(){
+ var err=validatePeriodPair(byId("incomeStart").value.trim(),byId("incomeEnd").value.trim(),true);
+ var msg=byId("incomeError"),btn=byId("incomeSaveButton");
+ if(err){msg.textContent=err;msg.classList.add("show");btn.disabled=true}
+ else{msg.textContent="";msg.classList.remove("show");btn.disabled=false}
+ return !err;
+}
 function saveIncome(){
- var mode=byId("incomePeriodMode").value,startRaw=byId("incomeStart").value.trim(),endRaw=byId("incomeEnd").value.trim();
- var start=periodToAge(startRaw,mode),end=periodToAge(endRaw,mode);
- if(!isFinite(start)||!isFinite(end)){alert("開始と終了を入力してください。");return}
- if(end<start){alert("終了は開始以上にしてください。");return}
+ if(!validateIncome())return;
+ var mode="auto",startRaw=byId("incomeStart").value.trim(),endRaw=normalizedEndRaw(byId("incomeEnd").value);
+ var start=periodToAge(startRaw,mode,false),end=periodToAge(endRaw,mode,true);
  var o={id:editing.income||nextId++,name:byId("incomeName").value||"名称未入力",amount:num("incomeAmount"),periodMode:mode,startRaw:startRaw,endRaw:endRaw,start:start,end:end};
+ var wasEditing=!!editing.income;
  if(editing.income){incomes=incomes.map(function(x){return x.id===o.id?o:x})}else incomes.push(o);
- closeEditor("income");renderIncomes();markDirty();recalculateAfterChange();recordHistory(editing.income?"収入を変更しました":"収入を追加しました")
+ closeEditor("income");renderIncomes();updateFabForActiveTab();markDirty();recalculateAfterChange();recordHistory(wasEditing?"収入を変更しました":"収入を追加しました")
 }
 function openExpenseEditor(id){
- editing.expense=id||null;var a=id?expenses.find(function(x){return x.id===id}):null,s=num("startAge"),e=s+num("years")-1;
+ editing.expense=id||null;var a=id?expenses.find(function(x){return x.id===id}):null,s=num("startAge");
  byId("expenseEditorTitle").textContent=a?"支出を編集":"支出を追加";
  byId("expenseName").value=a?a.name:"";
  byId("expenseAmount").value=a?a.amount:"";
  byId("expenseUnit").value=a?(a.once?"once":a.unit):"monthly";
  byId("expensePeriodMode").value=a?itemMode(a):"auto";
  byId("expenseStart").value=a?itemRaw(a,"start"):s;
- byId("expenseEnd").value=a&&!a.once?itemRaw(a,"end"):e;
+ byId("expenseEnd").value=a&&!a.once?itemRaw(a,"end"):"";
  updatePeriodLabels("expense");expenseUnitChanged();
  byId("expenseListView").classList.add("hidden");
  byId("expenseSectionHead").style.display="none";
@@ -625,17 +697,14 @@ function expenseUnitChanged(){
 }
 function validateExpense(){
  var missing=[];
- if(!byId("expenseName").value.trim())missing.push("支出名");
- if(!(parseFloat(byId("expenseAmount").value)>0))missing.push("金額");
- var mode=byId("expensePeriodMode").value;
- var start=periodToAge(byId("expenseStart").value,mode),end=periodToAge(byId("expenseEnd").value,mode);
- if(!isFinite(start)||start<0)missing.push("開始");
+ if(!byId("expenseName").value.trim())missing.push("支出名を入力してください。");
+ if(!(parseFloat(byId("expenseAmount").value)>0))missing.push("金額を入力してください。");
  var once=byId("expenseUnit").value==="once";
- if(!once&&(!isFinite(end)||end<0))missing.push("終了");
- if(!once&&isFinite(start)&&isFinite(end)&&end<start)missing.push("終了は開始以上");
+ var periodError=once?(periodInputKind(byId("expenseStart").value,false)==="invalid"?"開始は1～3桁の年齢、または4桁の西暦で入力してください。":""):validatePeriodPair(byId("expenseStart").value.trim(),byId("expenseEnd").value.trim(),true);
+ if(periodError)missing.push(periodError);
  var msg=byId("expenseError"),btn=byId("expenseSaveButton");
  if(missing.length){
-  msg.textContent=missing.join("、")+"が入力されていません。";
+  msg.textContent=missing.join(" ");
   msg.classList.add("show");btn.disabled=true;
  }else{
   msg.textContent="";msg.classList.remove("show");btn.disabled=false;
@@ -645,7 +714,7 @@ function saveExpense(){
  validateExpense();
  if(byId("expenseSaveButton").disabled)return;
  var once=byId("expenseUnit").value==="once",mode=byId("expensePeriodMode").value;
- var startRaw=byId("expenseStart").value.trim(),endRaw=once?null:byId("expenseEnd").value.trim();
+ var startRaw=byId("expenseStart").value.trim(),endRaw=once?null:normalizedEndRaw(byId("expenseEnd").value);
  var o={
   id:editing.expense||nextId++,
   name:byId("expenseName").value.trim(),
@@ -654,35 +723,47 @@ function saveExpense(){
   periodMode:mode,
   startRaw:startRaw,
   endRaw:endRaw,
-  start:periodToAge(startRaw,mode),
-  end:once?null:periodToAge(endRaw,mode),
+  start:periodToAge(startRaw,mode,false),
+  end:once?null:periodToAge(endRaw,mode,true),
   once:once
  };
+ var wasEditing=!!editing.expense;
  if(editing.expense){expenses=expenses.map(function(x){return x.id===o.id?o:x})}else expenses.push(o);
- closeEditor("expense");renderExpenses();markDirty();recalculateAfterChange();recordHistory(editing.expense?"支出を変更しました":"支出を追加しました")
+ closeEditor("expense");renderExpenses();updateFabForActiveTab();markDirty();recalculateAfterChange();recordHistory(wasEditing?"支出を変更しました":"支出を追加しました")
 }
 function del(type,id){
  if(type==="asset")assets=assets.filter(function(x){return x.id!==id});
  if(type==="income")incomes=incomes.filter(function(x){return x.id!==id});
  if(type==="expense")expenses=expenses.filter(function(x){return x.id!==id});
- renderAllLists();markDirty();recalculateAfterChange();recordHistory("項目を削除しました")
+ renderAllLists();updateFabForActiveTab();markDirty();recalculateAfterChange();recordHistory("項目を削除しました")
 }
 function row(type,id,name,sub,value){
  return '<div class="list-row"><button class="minus" onclick="del(\''+type+'\','+id+')" aria-label="削除">−</button><button class="editbtn" onclick="open'+type.charAt(0).toUpperCase()+type.slice(1)+'Editor('+id+')"><div class="item-main"><div class="item-name">'+name+'</div><div class="item-sub">'+sub+'</div></div></button><div class="item-value">'+value+'</div></div>'
 }
+function emptyAction(type){
+ var label=APP_CONFIG.labels.empty[type];
+ var opener=type==="asset"?"openAssetEditor()":type==="income"?"openIncomeEditor()":"openExpenseEditor()";
+ return '<div class="empty-action"><div class="empty-action-title">'+label+'</div><button class="empty-add-btn" onclick="'+opener+'">＋ '+label+'</button></div>'
+}
 function renderAssets(){
- byId("assetList").innerHTML=assets.length?assets.map(function(a){return row("asset",a.id,a.name,"現在額",money(a.amount))}).join(""):'<div class="empty">資産がまだありません</div>';enableSwipeDelete()
+ byId("assetList").innerHTML=assets.map(function(a){return row("asset",a.id,a.name,"現在額",money(a.amount))}).join("");
+ if(activeEntryType()==="asset"&&assets.length===0)openAssetEditor();
+ enableSwipeDelete()
 }
 function renderIncomes(){
  var sorted=incomes.slice().sort(function(a,b){return itemStartAge(a)-itemStartAge(b)});
- byId("incomeList").innerHTML=sorted.length?sorted.map(function(a){return row("income",a.id,a.name,periodRangeText(a),money(a.amount)+"/年")}).join(""):'<div class="empty">収入がまだありません</div>';enableSwipeDelete()
+ byId("incomeList").innerHTML=sorted.map(function(a){return row("income",a.id,a.name,periodRangeText(a),money(a.amount)+"/年")}).join("");
+ if(activeEntryType()==="income"&&incomes.length===0)openIncomeEditor();
+ enableSwipeDelete()
 }
 function renderExpenses(){
  var normal=expenses.filter(function(x){return !x.once}).sort(function(a,b){return itemStartAge(a)-itemStartAge(b)});
  var once=expenses.filter(function(x){return x.once}).sort(function(a,b){return itemStartAge(a)-itemStartAge(b)});
  var html=normal.map(function(a){return row("expense",a.id,a.name,periodRangeText(a),money(a.amount)+(a.unit==="monthly"?"/月":"/年"))}).join("");
- if(once.length){html+='<div class="note" style="margin:0;border-radius:0">一時支出（年齢順）</div>'+once.map(function(a){return row("expense",a.id,a.name,periodDisplay(itemRaw(a,"start"),itemMode(a))+"・一度だけ",money(a.amount))}).join("")}
- byId("expenseList").innerHTML=html||'<div class="empty">支出がまだありません</div>';enableSwipeDelete()
+ if(once.length){html+='<div class="note" style="margin:0;border-radius:0">一時支出（年齢順）</div>'+once.map(function(a){return row("expense",a.id,a.name,periodDisplay(itemRaw(a,"start"),itemMode(a),false)+"・一度だけ",money(a.amount))}).join("")}
+ byId("expenseList").innerHTML=html;
+ if(activeEntryType()==="expense"&&expenses.length===0)openExpenseEditor();
+ enableSwipeDelete()
 }
 function renderAllLists(){renderAssets();renderIncomes();renderExpenses();enableSwipeDelete()}
 function enableSwipeDelete(){
@@ -890,7 +971,7 @@ function toggleDetails(){var d=byId("details"),o=d.classList.toggle("open");byId
 
 const APP_CONFIG = Object.freeze({
  name:"わが家の資産計画",
- version:"v32",
+ version:"v35",
  storage:Object.freeze({
   work:"asset-plan-work",
   history:"asset-plan-history",
