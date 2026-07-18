@@ -293,7 +293,7 @@ select{padding-right:34px}
   .bottom-nav{display:none!important}
 }
 
-/* v31: three-part mobile layout. Header and bottom navigation always remain visible; only the active panel scrolls. */
+/* Three-part mobile layout: header and bottom navigation remain visible; only the active panel scrolls. */
 @media(max-width:1000px){
   html,body{height:100%;min-height:100%;overflow:hidden}
   body{overscroll-behavior:none}
@@ -337,6 +337,9 @@ select{padding-right:34px}
     padding-bottom:8px;
   }
   .fab{bottom:calc(70px + env(safe-area-inset-bottom))}
+
+  /* On phones, use one continuous vertical scroll area. */
+  .year-list{max-height:none;overflow:visible}
 }
 
 </style>
@@ -801,6 +804,10 @@ function renderYearList(){
   var cls=r.closing<0?"danger":(r.closing<Math.max(500,initial*0.2)?"warn":"");
   return '<div class="year-row '+cls+'"><div><b>'+r.year+'</b></div><div>'+r.age+'歳</div><div>'+Math.round(r.income).toLocaleString()+'</div><div>'+Math.round(r.expense+r.event).toLocaleString()+'</div><div class="asset-end '+(r.closing<0?'negative':'')+'">'+Math.round(r.closing).toLocaleString()+'</div></div>'
  }).join("");
+ var expected=Math.max(1,num("years"));
+ if(data.length!==expected){
+  console.warn("詳細計算結果の行数が計算期間と一致しません",{expected:expected,actual:data.length});
+ }
 }
 function niceStep(range){
  var raw=Math.max(100,range/5);
@@ -883,7 +890,7 @@ function toggleDetails(){var d=byId("details"),o=d.classList.toggle("open");byId
 
 const APP_CONFIG = Object.freeze({
  name:"わが家の資産計画",
- version:"v31",
+ version:"v32",
  storage:Object.freeze({
   work:"asset-plan-work",
   history:"asset-plan-history",
