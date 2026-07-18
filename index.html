@@ -1129,12 +1129,16 @@ function draw(id){
 }
 function drawAll(){draw("homeChart")}
 function runAndShow(){calculate();showTab("basic")}
-function toggleDetails(){var d=byId("details"),o=d.classList.toggle("open");byId("detailsButton").textContent=o?"▲ 詳細計算結果を閉じる":"▼ 詳細計算結果を表示"}
+function toggleDetails(){
+ var d=byId("details"),o=d.classList.toggle("open");
+ var button=document.querySelector('.dashboard-chart-head .mini-btn');
+ if(button)button.textContent=o?"詳細計算結果を閉じる":"詳細計算結果";
+}
 
 
 const APP_CONFIG = Object.freeze({
  name:"わが家の資産計画",
- version:"v39",
+ version:"v40",
  storage:Object.freeze({
   work:"asset-plan-work",
   history:"asset-plan-history",
