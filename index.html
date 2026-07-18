@@ -21,6 +21,7 @@ h1{font-size:20px;margin:0 0 3px}h2{font-size:18px;margin:0 0 6px}.lead,.note{fo
 .panel{display:none}.panel.active{display:block}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 .field label{font-size:12px;font-weight:800}.field input,.field select{width:100%;margin-top:4px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:16px;background:#fff}
+.first-field-cue{outline:3px solid rgba(31,111,95,.20);outline-offset:2px;box-shadow:0 0 0 1px var(--accent) inset}
 .btn{border:0;border-radius:9px;padding:10px 13px;font-weight:800}.primary{background:var(--accent);color:#fff}.secondary{background:#edf1f6;color:var(--text)}
 .add{width:100%;background:var(--soft);color:var(--accent);margin-top:8px}
 .actions{display:flex;justify-content:space-between;gap:8px;margin-top:10px;position:sticky;bottom:0;background:rgba(243,246,250,.96);padding:7px 0 max(2px,env(safe-area-inset-bottom))}.actions .btn{min-width:0;white-space:nowrap}
@@ -579,10 +580,22 @@ function closeEditor(type,force){
 }
 function focusFirstFieldWhenAdding(id,fieldId){
  if(id)return;
- window.setTimeout(function(){
-  var field=byId(fieldId);
-  if(field){field.focus();field.setSelectionRange(0,field.value.length)}
- },0);
+ var field=byId(fieldId);
+ if(!field)return;
+ // Keep focus inside the original tap/click event. This is important on mobile browsers.
+ try{field.focus({preventScroll:true})}catch(e){field.focus()}
+ try{field.setSelectionRange(0,field.value.length)}catch(e){}
+ field.classList.add("first-field-cue");
+ var clearCue=function(){field.classList.remove("first-field-cue")};
+ field.addEventListener("input",clearCue,{once:true});
+ field.addEventListener("focus",function(){
+  window.setTimeout(function(){if(document.activeElement===field)clearCue()},180);
+ },{once:true});
+ // A real touch on the highlighted field always performs a final focus attempt.
+ field.addEventListener("touchend",function(){
+  try{field.focus({preventScroll:true})}catch(e){field.focus()}
+  clearCue();
+ },{once:true,passive:true});
 }
 function openAssetEditor(id){
  editing.asset=id||null;var a=id?assets.find(function(x){return x.id===id}):null;
@@ -981,7 +994,7 @@ function toggleDetails(){var d=byId("details"),o=d.classList.toggle("open");byId
 
 const APP_CONFIG = Object.freeze({
  name:"わが家の資産計画",
- version:"v36",
+ version:"v37",
  storage:Object.freeze({
   work:"asset-plan-work",
   history:"asset-plan-history",
