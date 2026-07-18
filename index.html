@@ -458,7 +458,7 @@ body.list-drag-active{user-select:none;-webkit-user-select:none;overflow:hidden}
 </div>
 <div class="period-line">
 <select id="incomePeriodMode" class="hidden-file" aria-hidden="true"><option value="auto" selected>自動</option></select>
-<div class="field"><label id="incomeStartLabel">開始<input id="incomeStart" type="text" inputmode="numeric" placeholder="65 / 2028" oninput="validateIncome()"></label></div>
+<div class="field"><label id="incomeStartLabel">開始<input id="incomeStart" type="text" inputmode="numeric" placeholder="65 / 2028" oninput="syncPeriodFormatFromStart('income');validateIncome()"></label></div>
 <div class="field"><label id="incomeEndLabel">終了<input id="incomeEnd" type="text" inputmode="numeric" placeholder="999" oninput="validateIncome()"></label></div>
 <div class="period-help"><b>入力方法</b><br>1～3桁：年齢（例：65、100）／4桁：西暦（例：2026、2035）<br>終了欄の999または未入力は「終了なし（継続）」です。<br>開始と終了は、年齢同士または西暦同士で入力してください。</div>
 </div>
@@ -475,7 +475,7 @@ body.list-drag-active{user-select:none;-webkit-user-select:none;overflow:hidden}
 <div class="editor-title" id="expenseEditorTitle">支出を追加</div>
 <div class="editor-grid">
 <div class="inline-pair">
-<div class="field"><label>支出名<input id="expenseName" type="text" placeholder="例：生活費、車買替" oninput="validateExpense()"></label></div>
+<div class="field"><label>支出名<input id="expenseName" type="text" placeholder="例：生活費、車買替" oninput="syncPeriodFormatFromStart('expense');validateExpense()"></label></div>
 <div class="field"><label>金額（万円）<input id="expenseAmount" type="number" placeholder="0" oninput="validateExpense()"></label></div>
 </div>
 <div class="field full"><label>金額単位
@@ -636,6 +636,32 @@ function updatePeriodLabels(type){
  byId(type+"StartLabel").childNodes[0].nodeValue="開始"+suffix;
  var endLabel=byId(type+"EndLabel");if(endLabel)endLabel.childNodes[0].nodeValue="終了"+suffix;
 }
+function detectedStartKind(type){
+ var field=byId(type+"Start");
+ var kind=periodInputKind(field?field.value:"",false);
+ return kind==="age"||kind==="year"?kind:"";
+}
+function syncPeriodFormatFromStart(type){
+ var kind=detectedStartKind(type);
+ var mode=byId(type+"PeriodMode");
+ if(mode)mode.value=kind||"auto";
+ updatePeriodLabels(type);
+ var end=byId(type+"End");
+ if(end){
+  end.placeholder=kind==="year"?"例：2035 / 999":kind==="age"?"例：75 / 999":"999";
+ }
+}
+function preferredStartKind(type){
+ var list=type==="income"?incomes:expenses;
+ for(var i=list.length-1;i>=0;i--){
+  var raw=itemRaw(list[i],"start"),kind=periodInputKind(raw,false);
+  if(kind==="age"||kind==="year")return kind;
+ }
+ return "age";
+}
+function defaultStartForType(type){
+ return preferredStartKind(type)==="year"?num("startYear"):num("startAge");
+}
 function periodKind(raw,mode){
  var text=String(raw==null?"":raw).trim();
  if(mode==="year")return "year";
@@ -690,12 +716,12 @@ function periodRangeText(item){
  return periodDisplay(start,mode,false)+"～"+periodDisplay(end,mode,true);
 }
 function openIncomeEditor(id){
- editing.income=id||null;var a=id?incomes.find(function(x){return x.id===id}):null,s=num("startAge");
+ editing.income=id||null;var a=id?incomes.find(function(x){return x.id===id}):null,s=defaultStartForType("income");
  byId("incomeEditorTitle").textContent=a?"収入を編集":"収入を追加";
  byId("incomeName").value=a?a.name:"";byId("incomeAmount").value=a?a.amount:"";
  byId("incomePeriodMode").value=a?itemMode(a):"auto";
  byId("incomeStart").value=a?itemRaw(a,"start"):s;byId("incomeEnd").value=a?itemRaw(a,"end"):"";
- updatePeriodLabels("income");validateIncome();
+ syncPeriodFormatFromStart("income");validateIncome();
  byId("incomeListView").classList.add("hidden");byId("incomeSectionHead").style.display="none";byId("incomeEditor").classList.add("open");
  focusFirstFieldWhenAdding(id,"incomeName")
 }
@@ -716,7 +742,7 @@ function saveIncome(){
  closeEditor("income");renderIncomes();updateFabForActiveTab();markDirty();recalculateAfterChange();recordHistory(wasEditing?"収入を変更しました":"収入を追加しました")
 }
 function openExpenseEditor(id){
- editing.expense=id||null;var a=id?expenses.find(function(x){return x.id===id}):null,s=num("startAge");
+ editing.expense=id||null;var a=id?expenses.find(function(x){return x.id===id}):null,s=defaultStartForType("expense");
  byId("expenseEditorTitle").textContent=a?"支出を編集":"支出を追加";
  byId("expenseName").value=a?a.name:"";
  byId("expenseAmount").value=a?a.amount:"";
@@ -724,7 +750,7 @@ function openExpenseEditor(id){
  byId("expensePeriodMode").value=a?itemMode(a):"auto";
  byId("expenseStart").value=a?itemRaw(a,"start"):s;
  byId("expenseEnd").value=a&&!a.once?itemRaw(a,"end"):"";
- updatePeriodLabels("expense");expenseUnitChanged();
+ syncPeriodFormatFromStart("expense");expenseUnitChanged();
  byId("expenseListView").classList.add("hidden");
  byId("expenseSectionHead").style.display="none";
  byId("expenseEditor").classList.add("open");
@@ -1129,16 +1155,12 @@ function draw(id){
 }
 function drawAll(){draw("homeChart")}
 function runAndShow(){calculate();showTab("basic")}
-function toggleDetails(){
- var d=byId("details"),o=d.classList.toggle("open");
- var button=document.querySelector('.dashboard-chart-head .mini-btn');
- if(button)button.textContent=o?"詳細計算結果を閉じる":"詳細計算結果";
-}
+function toggleDetails(){var d=byId("details"),o=d.classList.toggle("open");byId("detailsButton").textContent=o?"▲ 詳細計算結果を閉じる":"▼ 詳細計算結果を表示"}
 
 
 const APP_CONFIG = Object.freeze({
  name:"わが家の資産計画",
- version:"v40",
+ version:"v41",
  storage:Object.freeze({
   work:"asset-plan-work",
   history:"asset-plan-history",
