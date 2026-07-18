@@ -628,7 +628,8 @@ function saveAsset(){
  var wasEditing=!!editing.asset;
  var o={id:editing.asset||nextId++,name:byId("assetName").value||"名称未入力",amount:num("assetAmount")};
  if(editing.asset){assets=assets.map(function(x){return x.id===o.id?o:x})}else assets.push(o);
- closeEditor("asset");renderAssets();updateFabForActiveTab();markDirty();recalculateAfterChange();recordHistory(wasEditing?"資産を変更しました":"資産を追加しました")
+ closeEditor("asset");renderAssets();updateFabForActiveTab();markDirty();recalculateAfterChange();recordHistory(wasEditing?"資産を変更しました":"資産を追加しました");
+ if(!wasEditing)showNewestItemAboveAddButton("asset",o.id)
 }
 function updatePeriodLabels(type){
  var mode=byId(type+"PeriodMode").value;
@@ -739,7 +740,8 @@ function saveIncome(){
  var o={id:editing.income||nextId++,name:byId("incomeName").value||"名称未入力",amount:num("incomeAmount"),periodMode:mode,startRaw:startRaw,endRaw:endRaw,start:start,end:end};
  var wasEditing=!!editing.income;
  if(editing.income){incomes=incomes.map(function(x){return x.id===o.id?o:x})}else incomes.push(o);
- closeEditor("income");renderIncomes();updateFabForActiveTab();markDirty();recalculateAfterChange();recordHistory(wasEditing?"収入を変更しました":"収入を追加しました")
+ closeEditor("income");renderIncomes();updateFabForActiveTab();markDirty();recalculateAfterChange();recordHistory(wasEditing?"収入を変更しました":"収入を追加しました");
+ if(!wasEditing)showNewestItemAboveAddButton("income",o.id)
 }
 function openExpenseEditor(id){
  editing.expense=id||null;var a=id?expenses.find(function(x){return x.id===id}):null,s=defaultStartForType("expense");
@@ -798,7 +800,8 @@ function saveExpense(){
  };
  var wasEditing=!!editing.expense;
  if(editing.expense){expenses=expenses.map(function(x){return x.id===o.id?o:x})}else expenses.push(o);
- closeEditor("expense");renderExpenses();updateFabForActiveTab();markDirty();recalculateAfterChange();recordHistory(wasEditing?"支出を変更しました":"支出を追加しました")
+ closeEditor("expense");renderExpenses();updateFabForActiveTab();markDirty();recalculateAfterChange();recordHistory(wasEditing?"支出を変更しました":"支出を追加しました");
+ if(!wasEditing)showNewestItemAboveAddButton("expense",o.id)
 }
 function getCollection(type){
  if(type==="asset")return assets;
@@ -863,6 +866,22 @@ function renderExpenses(){
  enableListInteractions("expenseList")
 }
 function renderAllLists(){renderAssets();renderIncomes();renderExpenses()}
+function showNewestItemAboveAddButton(type,id){
+ window.requestAnimationFrame(function(){
+  var row=document.querySelector('.list-row[data-type="'+type+'"][data-id="'+Number(id)+'"]');
+  if(!row)return;
+  var panel=row.closest(".panel");
+  if(panel&&window.getComputedStyle(panel).overflowY!=="visible"){
+   var rowRect=row.getBoundingClientRect(),panelRect=panel.getBoundingClientRect();
+   var reserved=96;
+   var delta=rowRect.bottom-(panelRect.bottom-reserved);
+   if(delta>0)panel.scrollBy({top:delta+8,behavior:"smooth"});
+  }else{
+   row.scrollIntoView({block:"end",behavior:"smooth"});
+   window.setTimeout(function(){window.scrollBy(0,-96)},180);
+  }
+ })
+}
 function closeOpenDelete(exceptRow){
  document.querySelectorAll(".list-row.delete-open").forEach(function(r){if(r!==exceptRow)r.classList.remove("delete-open")})
 }
@@ -1160,7 +1179,7 @@ function toggleDetails(){var d=byId("details"),o=d.classList.toggle("open");byId
 
 const APP_CONFIG = Object.freeze({
  name:"わが家の資産計画",
- version:"v41",
+ version:"v42",
  storage:Object.freeze({
   work:"asset-plan-work",
   history:"asset-plan-history",
