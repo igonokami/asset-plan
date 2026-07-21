@@ -30,7 +30,7 @@ h1{font-size:20px;margin:0 0 3px}h2{font-size:18px;margin:0 0 6px}.lead,.note{fo
 .list-row:last-child{border-bottom:0}.minus{width:25px;height:25px;border:0;border-radius:50%;background:#fde8e7;color:var(--danger);font-size:20px;line-height:20px;padding:0}
 .item-main{min-width:0}.item-name{font-size:14px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-.item-value{text-align:right;font-size:14px;font-weight:850;white-space:nowrap;font-variant-numeric:tabular-nums}.expense-value{display:inline-grid;grid-template-columns:minmax(3ch,auto) 2.4em 2.4em;align-items:baseline;justify-content:end;column-gap:0}.expense-number{text-align:right}.expense-unit,.expense-period{text-align:left}.editbtn{border:0;background:transparent;padding:0;text-align:left;color:inherit;width:100%}
+.item-value{text-align:right;font-size:14px;font-weight:850;white-space:nowrap;font-variant-numeric:tabular-nums}.expense-value{display:inline-grid;grid-template-columns:minmax(3ch,auto) 2.4em 2.4em;align-items:baseline;justify-content:end;column-gap:0}.expense-number{text-align:right}.expense-unit,.expense-period{text-align:left}.expense-period.period-year{color:#b7bec8;font-weight:850}.editbtn{border:0;background:transparent;padding:0;text-align:left;color:inherit;width:100%}
 .empty{padding:16px;text-align:center;color:var(--muted);font-size:13px}
 .empty-action{padding:24px 14px;text-align:center;background:#fbfcfd}
 .empty-action-title{font-size:15px;font-weight:850;color:var(--text);margin-bottom:10px}
@@ -896,8 +896,9 @@ function normalizeExpenseOrder(){
 }
 function expenseValueHtml(item){
  var amount=Math.round(item.amount).toLocaleString();
- var period=item.once?"":item.unit==="monthly"?"／月":"／年";
- return '<span class="expense-value"><span class="expense-number">'+esc(amount)+'</span><span class="expense-unit">万円</span><span class="expense-period">'+esc(period)+'</span></span>';
+ var period=item.once?"　　":item.unit==="monthly"?"／月":"／年";
+ var periodClass=item.unit==="yearly"&&!item.once?" period-year":"";
+ return '<span class="expense-value"><span class="expense-number">'+esc(amount)+'</span><span class="expense-unit">万円</span><span class="expense-period'+periodClass+'">'+esc(period)+'</span></span>';
 }
 function renderExpenses(){
  normalizeExpenseOrder();
@@ -1223,7 +1224,7 @@ function toggleDetails(){var d=byId("details"),o=d.classList.toggle("open");byId
 
 const APP_CONFIG = Object.freeze({
  name:"わが家の資産計画",
- version:"v45",
+ version:"v47",
  storage:Object.freeze({
   work:"asset-plan-work",
   history:"asset-plan-history",
