@@ -30,7 +30,7 @@ h1{font-size:20px;margin:0 0 3px}h2{font-size:18px;margin:0 0 6px}.lead,.note{fo
 .list-row:last-child{border-bottom:0}.minus{width:25px;height:25px;border:0;border-radius:50%;background:#fde8e7;color:var(--danger);font-size:20px;line-height:20px;padding:0}
 .item-main{min-width:0}.item-name{font-size:14px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-.item-value{text-align:right;font-size:14px;font-weight:850;white-space:nowrap}.editbtn{border:0;background:transparent;padding:0;text-align:left;color:inherit;width:100%}
+.item-value{text-align:right;font-size:14px;font-weight:850;white-space:nowrap;font-variant-numeric:tabular-nums}.expense-value{display:inline-grid;grid-template-columns:minmax(3ch,auto) 2.4em 2.4em;align-items:baseline;justify-content:end;column-gap:0}.expense-number{text-align:right}.expense-unit,.expense-period{text-align:left}.editbtn{border:0;background:transparent;padding:0;text-align:left;color:inherit;width:100%}
 .empty{padding:16px;text-align:center;color:var(--muted);font-size:13px}
 .empty-action{padding:24px 14px;text-align:center;background:#fbfcfd}
 .empty-action-title{font-size:15px;font-weight:850;color:var(--text);margin-bottom:10px}
@@ -48,14 +48,14 @@ h1{font-size:20px;margin:0 0 3px}h2{font-size:18px;margin:0 0 6px}.lead,.note{fo
 /* v26: related fields stay on one line */
 .inline-pair{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(105px,.85fr);gap:8px;grid-column:1/-1;align-items:end}
 .period-line{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px;grid-column:1/-1;align-items:end}
-.period-line.once{grid-template-columns:minmax(0,1fr)}
+.period-line.once{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .field.compact label{display:block}
 .period-help{grid-column:1/-1;font-size:11px;line-height:1.55;color:var(--muted);background:#f7f9fc;border-radius:8px;padding:8px 10px}
 .period-hint{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-2px;line-height:1.45}
 @media(max-width:420px){
  .inline-pair{grid-template-columns:minmax(0,1.28fr) minmax(100px,.72fr);gap:6px}
  .period-line{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5px}
- .period-line.once{grid-template-columns:minmax(0,1fr)}
+ .period-line.once{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
  .inline-pair .field label,.period-line .field label{font-size:11px}
  .inline-pair input,.period-line input,.period-line select{padding-left:7px;padding-right:7px}
 }
@@ -832,13 +832,13 @@ function esc(v){
  return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]});
 }
 function editorFunctionName(type){return "open"+type.charAt(0).toUpperCase()+type.slice(1)+"Editor"}
-function row(type,id,name,sub,value){
+function row(type,id,name,sub,value,valueIsHtml){
  return '<div class="list-row" data-type="'+esc(type)+'" data-id="'+Number(id)+'">'+
   '<div class="delete-action"><button type="button" onclick="event.stopPropagation();confirmDelete(\''+type+'\','+Number(id)+')">削除</button></div>'+
   '<div class="row-content" role="button" tabindex="0" aria-label="'+esc(name)+'を編集">'+
    '<button type="button" class="drag-handle" aria-label="'+esc(name)+'を並び替え" title="ドラッグして並び替え">≡</button>'+
    '<div class="item-main"><div class="item-name">'+esc(name)+'</div><div class="item-sub">'+esc(sub)+'</div></div>'+
-   '<div class="item-value">'+esc(value)+'</div>'+
+   '<div class="item-value">'+(valueIsHtml?value:esc(value))+'</div>'+
   '</div></div>'
 }
 function emptyAction(type){
@@ -856,11 +856,30 @@ function renderIncomes(){
  if(activeEntryType()==="income"&&incomes.length===0)openIncomeEditor();
  enableListInteractions("incomeList")
 }
+function normalizeExpenseOrder(){
+ var regular=[],oneTime=[];
+ expenses.forEach(function(item,index){
+  if(item.once)oneTime.push({item:item,index:index});
+  else regular.push(item);
+ });
+ oneTime.sort(function(a,b){
+  var ay=itemStartAge(a.item),by=itemStartAge(b.item);
+  if(!isFinite(ay))ay=Number.MAX_SAFE_INTEGER;
+  if(!isFinite(by))by=Number.MAX_SAFE_INTEGER;
+  return ay===by?a.index-b.index:ay-by;
+ });
+ expenses=regular.concat(oneTime.map(function(x){return x.item}));
+}
+function expenseValueHtml(item){
+ var amount=Math.round(item.amount).toLocaleString();
+ var period=item.once?"":item.unit==="monthly"?"／月":"／年";
+ return '<span class="expense-value"><span class="expense-number">'+esc(amount)+'</span><span class="expense-unit">万円</span><span class="expense-period">'+esc(period)+'</span></span>';
+}
 function renderExpenses(){
+ normalizeExpenseOrder();
  byId("expenseList").innerHTML=expenses.map(function(a){
   var sub=a.once?periodDisplay(itemRaw(a,"start"),itemMode(a),false)+"・一度だけ":periodRangeText(a);
-  var value=money(a.amount)+(a.once?"":a.unit==="monthly"?"/月":"/年");
-  return row("expense",a.id,a.name,sub,value)
+  return row("expense",a.id,a.name,sub,expenseValueHtml(a),true)
  }).join("");
  if(activeEntryType()==="expense"&&expenses.length===0)openExpenseEditor();
  enableListInteractions("expenseList")
@@ -900,6 +919,7 @@ function persistDomOrder(list,type){
  var ordered=ids.map(function(id){return byIdMap[id]}).filter(Boolean);
  current.forEach(function(x){if(ids.indexOf(Number(x.id))<0)ordered.push(x)});
  setCollection(type,ordered);
+ if(type==="expense")renderExpenses();
  markDirty();recalculateAfterChange();recordHistory("一覧の順番を変更しました")
 }
 var activeListDrag=null;
@@ -1179,7 +1199,7 @@ function toggleDetails(){var d=byId("details"),o=d.classList.toggle("open");byId
 
 const APP_CONFIG = Object.freeze({
  name:"わが家の資産計画",
- version:"v42",
+ version:"v44",
  storage:Object.freeze({
   work:"asset-plan-work",
   history:"asset-plan-history",
