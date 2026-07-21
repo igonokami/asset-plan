@@ -528,6 +528,7 @@ body.list-drag-active{user-select:none;-webkit-user-select:none;overflow:hidden}
 
 <script>
 var assets=[],incomes=[],expenses=[],editing={asset:null,income:null,expense:null},lastResults=[],lastResultsNoInflation=[],detailMode="inflation",isDirty=true,nextId=1;
+var listReturnPosition={asset:null,income:null,expense:null};
 function byId(id){return document.getElementById(id)}
 function num(id){var n=parseFloat(byId(id).value);return isNaN(n)?0:n}
 function money(n){return Math.round(n).toLocaleString()+"万円"}
@@ -586,6 +587,24 @@ function openEmptyEditorForTab(tab){
  if(tab==="expense")openExpenseEditor();
 }
 function closeAllEditors(force){["asset","income","expense"].forEach(function(x){closeEditor(x,force)})}
+function rememberListReturnPosition(type,id){
+ if(!id){listReturnPosition[type]=null;return}
+ var panel=byId("panel-"+(type==="asset"?"assets":type));
+ var usePanel=panel&&window.getComputedStyle(panel).overflowY!=="visible";
+ listReturnPosition[type]={usePanel:!!usePanel,scrollTop:usePanel?panel.scrollTop:(window.pageYOffset||document.documentElement.scrollTop||0)};
+}
+function restoreListReturnPosition(type){
+ var pos=listReturnPosition[type];
+ if(!pos)return;
+ listReturnPosition[type]=null;
+ window.requestAnimationFrame(function(){
+  window.requestAnimationFrame(function(){
+   var panel=byId("panel-"+(type==="asset"?"assets":type));
+   if(pos.usePanel&&panel)panel.scrollTop=pos.scrollTop;
+   else window.scrollTo(0,pos.scrollTop);
+  })
+ })
+}
 function closeEditor(type,force){
  if(!force&&typeIsEmpty(type)&&activeEntryType()===type){
   if(type==="asset")openAssetEditor();
@@ -596,7 +615,9 @@ function closeEditor(type,force){
  byId(type+"Editor").classList.remove("open");
  byId(type+"ListView").classList.remove("hidden");
  var head=byId(type+"SectionHead");if(head)head.style.display="block";
- editing[type]=null
+ editing[type]=null;
+ if(force)listReturnPosition[type]=null;
+ else restoreListReturnPosition(type)
 }
 function focusFirstFieldWhenAdding(id,fieldId){
  if(id)return;
@@ -618,6 +639,7 @@ function focusFirstFieldWhenAdding(id,fieldId){
  },{once:true,passive:true});
 }
 function openAssetEditor(id){
+ rememberListReturnPosition("asset",id);
  editing.asset=id||null;var a=id?assets.find(function(x){return x.id===id}):null;
  byId("assetEditorTitle").textContent=a?"資産を編集":"資産を追加";
  byId("assetName").value=a?a.name:"";byId("assetAmount").value=a?a.amount:"";
@@ -717,6 +739,7 @@ function periodRangeText(item){
  return periodDisplay(start,mode,false)+"～"+periodDisplay(end,mode,true);
 }
 function openIncomeEditor(id){
+ rememberListReturnPosition("income",id);
  editing.income=id||null;var a=id?incomes.find(function(x){return x.id===id}):null,s=defaultStartForType("income");
  byId("incomeEditorTitle").textContent=a?"収入を編集":"収入を追加";
  byId("incomeName").value=a?a.name:"";byId("incomeAmount").value=a?a.amount:"";
@@ -744,6 +767,7 @@ function saveIncome(){
  if(!wasEditing)showNewestItemAboveAddButton("income",o.id)
 }
 function openExpenseEditor(id){
+ rememberListReturnPosition("expense",id);
  editing.expense=id||null;var a=id?expenses.find(function(x){return x.id===id}):null,s=defaultStartForType("expense");
  byId("expenseEditorTitle").textContent=a?"支出を編集":"支出を追加";
  byId("expenseName").value=a?a.name:"";
@@ -1199,7 +1223,7 @@ function toggleDetails(){var d=byId("details"),o=d.classList.toggle("open");byId
 
 const APP_CONFIG = Object.freeze({
  name:"わが家の資産計画",
- version:"v44",
+ version:"v45",
  storage:Object.freeze({
   work:"asset-plan-work",
   history:"asset-plan-history",
