@@ -1248,7 +1248,7 @@ function toggleDetails(){var d=byId("details"),o=d.classList.toggle("open");byId
 
 const APP_CONFIG = Object.freeze({
  name:"わが家の資産計画",
- version:"v49",
+ version:"v51",
  storage:Object.freeze({
   work:"asset-plan-work",
   history:"asset-plan-history",
@@ -1286,6 +1286,7 @@ var suspendHistory=false;
 var formalSavedAt=null;
 var hasUnsavedChanges=true;
 var activeFileName="";
+var lastFormalSaveName="";
 
 function getStoredValue(primaryKey,legacyKeys){
  var value=localStorage.getItem(primaryKey);
@@ -1305,8 +1306,16 @@ function applyDefaultBasicValues(){
  byId("years").value=APP_CONFIG.defaults.years;
  byId("inflation").value=APP_CONFIG.defaults.inflation;
 }
-function makeSaveFileName(isoDate){
- return APP_CONFIG.labels.saveBase+"_"+isoDate.slice(0,10)+".json";
+function makeLocalDateTimeStamp(date){
+ function pad(value){return String(value).padStart(2,"0")}
+ return date.getFullYear()+"-"+pad(date.getMonth()+1)+"-"+pad(date.getDate())+"_"+pad(date.getHours())+"-"+pad(date.getMinutes());
+}
+function sanitizeSaveName(name){
+ return String(name||"").trim().replace(/[\\/:*?"<>|]/g,"_").replace(/\s+/g," ");
+}
+function makeSaveFileName(saveName,date){
+ var name=sanitizeSaveName(saveName)||APP_CONFIG.labels.saveBase;
+ return name+"_"+makeLocalDateTimeStamp(date)+".json";
 }
 function createInitialData(){
  nextId=1;
@@ -1321,12 +1330,13 @@ function loadMeta(){
   formalSavedAt=m.formalSavedAt||null;
   hasUnsavedChanges=m.hasUnsavedChanges!==false;
   activeFileName=m.activeFileName||"";
- }catch(e){formalSavedAt=null;hasUnsavedChanges=true;activeFileName=""}
+  lastFormalSaveName=m.lastFormalSaveName||"";
+ }catch(e){formalSavedAt=null;hasUnsavedChanges=true;activeFileName="";lastFormalSaveName=""}
  updateSaveStatus();
  updateAppInfo();
 }
 function storeMeta(){
- try{localStorage.setItem(APP_CONFIG.storage.meta,JSON.stringify({formalSavedAt:formalSavedAt,hasUnsavedChanges:hasUnsavedChanges,activeFileName:activeFileName}))}catch(e){}
+ try{localStorage.setItem(APP_CONFIG.storage.meta,JSON.stringify({formalSavedAt:formalSavedAt,hasUnsavedChanges:hasUnsavedChanges,activeFileName:activeFileName,lastFormalSaveName:lastFormalSaveName}))}catch(e){}
 }
 function updateSaveStatus(){
  var chip=byId("saveStatusChip"),time=byId("lastSaveTime");
@@ -1412,10 +1422,20 @@ function recordHistory(action){
 function openSettings(){byId("settingsPanel").classList.add("open");renderHistory()}
 function closeSettings(){byId("settingsPanel").classList.remove("open");byId("historyBox").classList.remove("open")}
 async function saveDataFile(){
- var now=new Date().toISOString();
+ var enteredName=window.prompt("保存名を入力してください。\n現在日時は自動でファイル名に追加されます。",lastFormalSaveName);
+ if(enteredName===null)return;
+ var saveName=sanitizeSaveName(enteredName);
+ if(!saveName){
+  alert("保存名を入力してください。");
+  return;
+ }
+ lastFormalSaveName=saveName;
+ storeMeta();
+ var saveDate=new Date();
+ var now=saveDate.toISOString();
  var state=appState();state.formalSavedAt=now;
  var data=JSON.stringify(state,null,2);
- var filename=makeSaveFileName(now);
+ var filename=makeSaveFileName(saveName,saveDate);
  var blob=new Blob([data],{type:"application/json"});
  var file;
  try{file=new File([blob],filename,{type:"application/json"})}catch(e){file=null}
@@ -1445,7 +1465,7 @@ async function saveDataFile(){
 function completeFormalSave(now,message,filename){
  formalSavedAt=now;hasUnsavedChanges=false;activeFileName=filename||activeFileName;storeMeta();updateSaveStatus();updateAppInfo();
  autoStore();recordHistory("正式保存しました");
- var help=byId("formalSaveHelp");if(help)help.textContent=message+"。ファイル名："+(filename||makeSaveFileName(now));
+ var help=byId("formalSaveHelp");if(help)help.textContent=message+"。ファイル名："+(filename||makeSaveFileName(APP_CONFIG.labels.saveBase,new Date(now)));
 }
 function chooseDataFile(){byId("dataFile").click()}
 function loadDataFile(input){
