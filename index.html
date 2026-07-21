@@ -30,7 +30,7 @@ h1{font-size:20px;margin:0 0 3px}h2{font-size:18px;margin:0 0 6px}.lead,.note{fo
 .list-row:last-child{border-bottom:0}.minus{width:25px;height:25px;border:0;border-radius:50%;background:#fde8e7;color:var(--danger);font-size:20px;line-height:20px;padding:0}
 .item-main{min-width:0}.item-name{font-size:14px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-.item-value{text-align:right;font-size:14px;font-weight:850;white-space:nowrap;font-variant-numeric:tabular-nums}.expense-value{display:inline-grid;grid-template-columns:minmax(3ch,auto) 2.4em 2.4em;align-items:baseline;justify-content:end;column-gap:0}.expense-number{text-align:right}.expense-unit,.expense-period{text-align:left}.expense-period.period-year{color:#b7bec8;font-weight:850}.editbtn{border:0;background:transparent;padding:0;text-align:left;color:inherit;width:100%}
+.item-value{text-align:right;font-size:14px;font-weight:850;white-space:nowrap;font-variant-numeric:tabular-nums}.expense-value{display:inline-grid;grid-template-columns:minmax(5ch,auto) 2.4em 2.4em;align-items:baseline;justify-content:end;column-gap:0}.expense-number{text-align:right}.expense-unit,.expense-period{text-align:left}.expense-period.period-year{color:#b7bec8;font-weight:850}.expense-unit-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:4px;border-bottom:1px solid var(--line)}.expense-unit-choice{border:0;background:transparent;color:#a0a8b4;padding:10px 2px 9px;font-size:14px;font-weight:850;white-space:nowrap;border-bottom:2px solid transparent}.expense-unit-choice.active{color:var(--text);border-bottom-color:var(--text)}.editbtn{border:0;background:transparent;padding:0;text-align:left;color:inherit;width:100%}
 .empty{padding:16px;text-align:center;color:var(--muted);font-size:13px}
 .empty-action{padding:24px 14px;text-align:center;background:#fbfcfd}
 .empty-action-title{font-size:15px;font-weight:850;color:var(--text);margin-bottom:10px}
@@ -476,14 +476,19 @@ body.list-drag-active{user-select:none;-webkit-user-select:none;overflow:hidden}
 <div class="editor-grid">
 <div class="inline-pair">
 <div class="field"><label>支出名<input id="expenseName" type="text" placeholder="例：生活費、車買替" oninput="syncPeriodFormatFromStart('expense');validateExpense()"></label></div>
-<div class="field"><label>金額（万円）<input id="expenseAmount" type="number" placeholder="0" oninput="validateExpense()"></label></div>
+<div class="field"><label>金額（万円）<input id="expenseAmount" type="number" step="0.01" placeholder="0.00" oninput="validateExpense()"></label></div>
 </div>
-<div class="field full"><label>金額単位
-<select id="expenseUnit" onchange="expenseUnitChanged()">
+<div class="field full"><label>金額単位</label>
+<select id="expenseUnit" class="hidden-file" aria-hidden="true" tabindex="-1" onchange="expenseUnitChanged()">
 <option value="monthly">月額</option>
 <option value="yearly">年額</option>
 <option value="once">一時支出額</option>
-</select></label></div>
+</select>
+<div class="expense-unit-picker" role="group" aria-label="金額単位">
+<button type="button" class="expense-unit-choice" data-unit="monthly" onclick="selectExpenseUnit('monthly')">月額</button>
+<button type="button" class="expense-unit-choice" data-unit="yearly" onclick="selectExpenseUnit('yearly')">年額</button>
+<button type="button" class="expense-unit-choice" data-unit="once" onclick="selectExpenseUnit('once')">一時支出額</button>
+</div></div>
 <div class="period-line" id="expensePeriodLine">
 <select id="expensePeriodMode" class="hidden-file" aria-hidden="true"><option value="auto" selected>自動</option></select>
 <div class="field"><label id="expenseStartLabel">開始<input id="expenseStart" type="text" inputmode="numeric" placeholder="65 / 2028" oninput="validateExpense()"></label></div>
@@ -783,8 +788,18 @@ function openExpenseEditor(id){
  validateExpense();
  focusFirstFieldWhenAdding(id,"expenseName");
 }
+function selectExpenseUnit(unit){
+ byId("expenseUnit").value=unit;
+ expenseUnitChanged();
+}
 function expenseUnitChanged(){
- var once=byId("expenseUnit").value==="once";
+ var selected=byId("expenseUnit").value;
+ document.querySelectorAll(".expense-unit-choice").forEach(function(btn){
+  var active=btn.getAttribute("data-unit")===selected;
+  btn.classList.toggle("active",active);
+  btn.setAttribute("aria-pressed",active?"true":"false");
+ });
+ var once=selected==="once";
  byId("expenseEndField").style.display=once?"none":"block";
  byId("expenseEndOnceField").style.display=once?"block":"none";
  byId("expensePeriodLine").classList.toggle("once",once);
@@ -895,7 +910,8 @@ function normalizeExpenseOrder(){
  expenses=regular.concat(oneTime.map(function(x){return x.item}));
 }
 function expenseValueHtml(item){
- var amount=Math.round(item.amount).toLocaleString();
+ var amount=Number(item.amount||0).toFixed(2);
+ if(Number(item.amount)>0&&Number(item.amount)<1)amount=amount.replace(/^0/,"");
  var period=item.once?"　　":item.unit==="monthly"?"／月":"／年";
  var periodClass=item.unit==="yearly"&&!item.once?" period-year":"";
  return '<span class="expense-value"><span class="expense-number">'+esc(amount)+'</span><span class="expense-unit">万円</span><span class="expense-period'+periodClass+'">'+esc(period)+'</span></span>';
@@ -1224,7 +1240,7 @@ function toggleDetails(){var d=byId("details"),o=d.classList.toggle("open");byId
 
 const APP_CONFIG = Object.freeze({
  name:"わが家の資産計画",
- version:"v47",
+ version:"v48",
  storage:Object.freeze({
   work:"asset-plan-work",
   history:"asset-plan-history",
